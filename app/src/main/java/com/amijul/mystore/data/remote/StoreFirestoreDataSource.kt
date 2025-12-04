@@ -1,0 +1,51 @@
+package com.amijul.mystore.data.remote
+
+import com.amijul.mystore.domain.home.StoreUiModel
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
+
+
+/**
+ * DTO that matches your backend's JSON for a store.
+ * Adjust field names / @SerialName to match your API.
+ */
+
+
+
+class StoreFirestoreDataSource(
+    private val firestore: FirebaseFirestore
+) {
+
+    suspend fun getStores(): List<StoreUiModel> {
+        val snapshot = firestore.collection("stores")
+            .get().await()
+
+        return snapshot.documents.mapNotNull { doc ->
+            val id = doc.id
+            val name = doc.getString("name") ?: return@mapNotNull null
+            val category = doc.getString("category") ?: "Other"
+            val distanceText = doc.getString("distanceText") ?: ""
+            val imageUrl = doc.getString("imageUrl") ?: ""
+            val locationName = doc.getString("locationName") ?: ""
+            val isOpen = doc.getBoolean("isOpen") ?: false
+
+            StoreUiModel(
+                id = id,
+                name = name,
+                category = category,
+                distanceText = distanceText,
+                imageUrl = imageUrl,
+                locationName = locationName,
+                isOpen = isOpen
+            )
+        }
+    }
+
+    companion object {
+        fun default(): StoreFirestoreDataSource {
+            return StoreFirestoreDataSource(
+                firestore = FirebaseFirestore.getInstance()
+            )
+        }
+    }
+}

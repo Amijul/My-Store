@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "420876340498",
+    "project_id": "my-store-a0b87",
+    "storage_bucket": "my-store-a0b87.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420876340498:android:f9f5cfe7af1a09c95f37cb",
+        "android_client_info": {
+          "package_name": "com.amijul.mystore"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1-qWgfsIbK2eOWsw93RK6yYEYrVq764w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
