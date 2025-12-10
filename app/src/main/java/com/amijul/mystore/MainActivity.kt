@@ -10,6 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.amijul.mystore.presentation.navigation.MyStoreApp
+import com.amijul.mystore.presentation.navigation.RootNavHost
 import com.amijul.mystore.ui.theme.MyStoreTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,7 +20,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MyStoreTheme {
                 Scaffold(modifier = Modifier.fillMaxSize().background(Color(0xFFFFBFC0))) { innerPadding ->
-                    MyStoreApp()
+                    RootNavHost()
                 }
             }
         }

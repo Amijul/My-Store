@@ -22,6 +22,10 @@ class HomeViewModel(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private val _bottomNav = MutableStateFlow(0)
+    val bottomNav: StateFlow<Int> = _bottomNav.asStateFlow()
+
+
 
     init {
         loadStores()
@@ -50,6 +54,10 @@ class HomeViewModel(
                 )
             }
         }
+    }
+
+    fun setBottomNav(index: Int) {
+        _bottomNav.value = index
     }
 
 

@@ -1,6 +1,7 @@
 package com.amijul.mystore.ui.home.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.amijul.mystore.domain.home.StoreUiModel
+import androidx.compose.foundation.BorderStroke
 
 @Composable
 fun StoreCard(
@@ -33,11 +34,15 @@ fun StoreCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        shape = MaterialTheme.shapes.large
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        )
     ) {
         Row(
             modifier = Modifier
@@ -46,7 +51,7 @@ fun StoreCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
 
-            // LEFT: text info
+            // LEFT: text info (50%)
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -84,14 +89,14 @@ fun StoreCard(
                 )
             }
 
-            // RIGHT: image with fixed width, square, cropped nicely
+            // RIGHT: image (50%), uses full width of its half
             AsyncImage(
                 model = store.imageUrl,
                 contentDescription = store.name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .width(110.dp)          // 👈 fixed width so it always shows nicely
-                    .aspectRatio(1f)        // square
+                    .weight(1f)                // equal space as text
+                    .aspectRatio(1.2f)          // tweak ratio: 1f = square, >1 = wider
                     .clip(MaterialTheme.shapes.large)
             )
         }

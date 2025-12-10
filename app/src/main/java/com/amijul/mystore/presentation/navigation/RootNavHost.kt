@@ -1,48 +1,30 @@
 package com.amijul.mystore.presentation.navigation
 
-import android.net.Uri
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.amijul.mystore.ui.account.AccountScreen
-import com.amijul.mystore.ui.home.HomeScreen
-import com.amijul.mystore.ui.order.OrderScreen
 import com.amijul.mystore.ui.products.ProductListScreen
 import com.amijul.mystore.ui.products.ProductListViewModel
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 @Composable
-fun MyNavHost(
-    navController: NavHostController,
-    modifier: Modifier = Modifier
-) {
+fun RootNavHost() {
+    val navController = rememberNavController()
+
     NavHost(
         navController = navController,
-        startDestination = "home",
-        modifier = modifier
+        startDestination = "main"
     ) {
-        composable("home") {
-            HomeScreen(
-                onGoToProductList = { storeId, storeName ->
-                    val encodedName = Uri.encode(storeName)
-                    navController.navigate("products/$storeId/$encodedName")
-                }
-            )
+        // Main tabbed area (home / orders / account)
+        composable("main") {
+            MyStoreApp(navController = navController)
         }
 
-        composable("orders") {
-            OrderScreen()
-        }
-
-        composable("account") {
-            AccountScreen()
-        }
-
+        // Product page – full screen, no top/bottom from MyStoreApp
         composable(
             route = "products/{storeId}/{storeName}",
             arguments = listOf(

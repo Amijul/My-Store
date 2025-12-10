@@ -1,5 +1,6 @@
 package com.amijul.mystore.data.remote
 
+import android.util.Log
 import com.amijul.mystore.domain.home.StoreUiModel
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
@@ -10,6 +11,7 @@ import kotlinx.coroutines.tasks.await
  * Adjust field names / @SerialName to match your API.
  */
 
+//private const val TAG = "StoreFirestoreDataSource"
 
 
 class StoreFirestoreDataSource(
@@ -28,6 +30,8 @@ class StoreFirestoreDataSource(
             val imageUrl = doc.getString("imageUrl") ?: ""
             val locationName = doc.getString("locationName") ?: ""
             val isOpen = doc.getBoolean("isOpen") ?: false
+
+           // Log.d(TAG, "getStores: $name, $category, $distanceText, $imageUrl, $locationName, $isOpen")
 
             StoreUiModel(
                 id = id,

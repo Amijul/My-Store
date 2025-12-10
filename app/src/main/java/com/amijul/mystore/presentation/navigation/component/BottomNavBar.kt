@@ -10,12 +10,20 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.amijul.mystore.domain.navigation.BottomNavItem
+import com.amijul.mystore.ui.home.HomeViewModel
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun BottomNavBar(navController: NavController) {
+fun BottomNavBar( homeViewModel: HomeViewModel = koinViewModel()) {
+
+
+    val bottomNav by homeViewModel.bottomNav.collectAsStateWithLifecycle()
+
+
     val items = listOf(
         BottomNavItem(
             route = "home",
@@ -34,22 +42,15 @@ fun BottomNavBar(navController: NavController) {
         )
     )
 
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
 
     NavigationBar {
-        items.forEach { item ->
-            val selected = currentRoute == item.route
+        items.forEachIndexed { index,  item ->
 
+            val selected = bottomNav == index
             NavigationBarItem(
                 selected = selected,
                 onClick = {
-                    navController.navigate(item.route) {
-                        launchSingleTop = true
-                        popUpTo("home") {
-                            inclusive = false
-                        }
-                    }
+                    homeViewModel.setBottomNav(index = index)
                 },
                 icon = item.icon,
                 label = { Text(item.label) },

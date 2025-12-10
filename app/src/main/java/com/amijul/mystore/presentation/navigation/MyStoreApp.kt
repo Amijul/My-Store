@@ -1,5 +1,6 @@
 package com.amijul.mystore.presentation.navigation
 
+import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -11,44 +12,61 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavController
 import com.amijul.mystore.presentation.navigation.component.BottomNavBar
+import com.amijul.mystore.ui.account.AccountScreen
+import com.amijul.mystore.ui.home.HomeScreen
+import com.amijul.mystore.ui.home.HomeViewModel
+import com.amijul.mystore.ui.order.OrderScreen
+import org.koin.androidx.compose.koinViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyStoreApp() {
-
-    val navController = rememberNavController()
+fun MyStoreApp(
+    navController: NavController,
+    homeViewModel: HomeViewModel = koinViewModel()
+) {
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Observe current route to decide visible chrome
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    // Product screen routes start with "products"
-    val isProductScreen = currentRoute?.startsWith("products") == true
+    // read current tab from ViewModel
+    val bottomNavIndex by homeViewModel.bottomNav.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
-            if (!isProductScreen) {
-                TopAppBar(
-                    title = { Text("MyStore") }
-                )
-            }
+            TopAppBar(
+                title = { Text("MyStore") }
+            )
         },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
         },
         bottomBar = {
-            if (!isProductScreen) {
-                BottomNavBar(navController = navController)
-            }
+            BottomNavBar(homeViewModel = homeViewModel)
         }
     ) { innerPadding ->
-        MyNavHost(
-            navController = navController,
-            modifier = Modifier.padding(innerPadding)
-        )
+        when (bottomNavIndex) {
+            0 -> {
+                HomeScreen(
+                    modifier = Modifier.padding(innerPadding),
+                    onGoToProductList = { storeId, storeName ->
+                        val encodedName = Uri.encode(storeName)
+                        navController.navigate("products/$storeId/$encodedName")
+                    }
+                )
+            }
+
+            1 -> {
+                OrderScreen(
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
+
+            2 -> {
+                AccountScreen(
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
+        }
     }
 }
