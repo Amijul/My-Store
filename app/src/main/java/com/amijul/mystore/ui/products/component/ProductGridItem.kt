@@ -41,6 +41,7 @@ import com.amijul.mystore.domain.product.ProductUiModel
 fun ProductGridItem(
     product: ProductUiModel,
     quantity: Int,
+    onClick: () -> Unit,
     onAddFirstTime: () -> Unit,
     onIncrease: () -> Unit,
     onDecrease: () -> Unit
@@ -49,6 +50,7 @@ fun ProductGridItem(
 
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
         shape = RoundedCornerShape(18.dp),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
         colors = CardDefaults.elevatedCardColors(
@@ -58,7 +60,7 @@ fun ProductGridItem(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp)
+                //.padding(10.dp)
         ) {
 
             // Image
@@ -68,122 +70,126 @@ fun ProductGridItem(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(3f / 4f)
+                    .aspectRatio(1f)
                     .clip(RoundedCornerShape(16.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Column(Modifier.fillMaxWidth().padding(10.dp)) {
+                // Price + wishlist
 
-            // Price + wishlist
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "₹${product.price.toInt()}",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "₹${product.price.toInt()}",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
                     )
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    IconButton(
+                        onClick = { /* TODO: wishlist later */ },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.FavoriteBorder,
+                            contentDescription = "Wishlist",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Name
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(4.dp))
 
-                IconButton(
-                    onClick = { /* TODO: wishlist later */ },
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.FavoriteBorder,
-                        contentDescription = "Wishlist",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                // Stock status (green / red)
+                val stockColor: Color
+                val stockText: String
+                if (product.inStock) {
+                    stockColor = Color(0xFF2E7D32) // green
+                    stockText = "In stock"
+                } else {
+                    stockColor = Color(0xFFC62828) // red
+                    stockText = "Out of stock"
                 }
-            }
 
-            // Name
-            Text(
-                text = product.name,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+                Text(
+                    text = stockText,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = stockColor
+                )
 
-            Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-            // Stock status (green / red)
-            val stockColor: Color
-            val stockText: String
-            if (product.inStock) {
-                stockColor = Color(0xFF2E7D32) // green
-                stockText = "In stock"
-            } else {
-                stockColor = Color(0xFFC62828) // red
-                stockText = "Out of stock"
-            }
-
-            Text(
-                text = stockText,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Medium
-                ),
-                color = stockColor
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // “Add to cart” button / quantity bar
-            if (!inCart) {
-                Button(
-                    onClick = onAddFirstTime,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.onBackground,
-                        contentColor = MaterialTheme.colorScheme.background
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.ShoppingCart,
-                        contentDescription = "Add to cart",
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add to cart")
-                }
-            } else {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    IconButton(onClick = onDecrease) {
-                        Icon(
-                            imageVector = Icons.Filled.Remove,
-                            contentDescription = "Decrease"
+                // “Add to cart” button / quantity bar
+                if (!inCart) {
+                    Button(
+                        onClick = onAddFirstTime,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.onBackground,
+                            contentColor = MaterialTheme.colorScheme.background
                         )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ShoppingCart,
+                            contentDescription = "Add to cart",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Add to cart")
                     }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        IconButton(onClick = onDecrease) {
+                            Icon(
+                                imageVector = Icons.Filled.Remove,
+                                contentDescription = "Decrease"
+                            )
+                        }
 
-                    Text(
-                        text = "Qty: $quantity",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    IconButton(onClick = onIncrease) {
-                        Icon(
-                            imageVector = Icons.Filled.Add,
-                            contentDescription = "Increase"
+                        Text(
+                            text = "Qty: $quantity",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
                         )
+
+                        IconButton(onClick = onIncrease) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = "Increase"
+                            )
+                        }
                     }
                 }
             }
+
+
+
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.amijul.mystore.ui.products
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,9 +14,12 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -25,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.amijul.mystore.domain.product.ProductUiModel
@@ -33,7 +38,8 @@ import com.amijul.mystore.ui.products.component.ProductGridItem
 @Composable
 fun ProductListScreen(
     viewModel: ProductListViewModel,
-    storeName: String
+    storeName: String,
+    onOpenProductDetail: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
@@ -49,26 +55,12 @@ fun ProductListScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFFD9E3FF))
             .padding(16.dp)
     ) {
 
-        // Top: store name
-        Text(
-            text = storeName,
-            style = MaterialTheme.typography.headlineSmall.copy(
-                fontWeight = FontWeight.Bold
-            )
-        )
 
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = "Browse items in this store.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
         // Search bar
         OutlinedTextField(
@@ -81,13 +73,44 @@ fun ProductListScreen(
                     contentDescription = "Search"
                 )
             },
-            placeholder = {
-                Text("Search for items in $storeName")
+            trailingIcon = {
+                IconButton(onClick = { /* TODO filters later */ }) {
+                    Icon(
+                        imageVector = Icons.Outlined.Tune,
+                        contentDescription = "Filter"
+                    )
+                }
             },
-            singleLine = true
+            placeholder = {
+                Text("Search for items in $storeName", maxLines = 1)
+            },
+            singleLine = true,
+            shape = MaterialTheme.shapes.large, // more rounded
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                cursorColor = MaterialTheme.colorScheme.primary
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+        // Top: store name
+        Text(
+            text = storeName,
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontWeight = FontWeight.SemiBold
+            )
+        )
+
+        Text(
+            text = "Browse items in this store.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+
 
         when {
             state.isLoading -> {
@@ -108,7 +131,13 @@ fun ProductListScreen(
             }
 
             else -> {
-                ProductGrid(products = filteredProducts)
+                ProductGrid(
+                    products = filteredProducts,
+                    onProductClick = { product ->
+                        viewModel.selectProduct(product.id)   // ✅ store selected in VM
+                        onOpenProductDetail()                 // ✅ navigate (no refetch)
+                    }
+                )
             }
         }
     }
@@ -116,7 +145,8 @@ fun ProductListScreen(
 
 @Composable
 fun ProductGrid(
-    products: List<ProductUiModel>
+    products: List<ProductUiModel>,
+    onProductClick: (ProductUiModel) -> Unit
 ) {
     val quantities = remember { mutableStateMapOf<String, Int>() }
 
@@ -135,6 +165,7 @@ fun ProductGrid(
                 onAddFirstTime = {
                     quantities[product.id] = 1
                 },
+                onClick = { onProductClick(product) },
                 onIncrease = {
                     val current = quantities[product.id] ?: 0
                     quantities[product.id] = current + 1

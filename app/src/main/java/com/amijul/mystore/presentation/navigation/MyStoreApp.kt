@@ -1,6 +1,7 @@
 package com.amijul.mystore.presentation.navigation
 
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -12,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavController
 import com.amijul.mystore.presentation.navigation.component.BottomNavBar
 import com.amijul.mystore.ui.account.AccountScreen
@@ -33,11 +35,6 @@ fun MyStoreApp(
     val bottomNavIndex by homeViewModel.bottomNav.collectAsStateWithLifecycle()
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("MyStore") }
-            )
-        },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
         },
@@ -48,7 +45,9 @@ fun MyStoreApp(
         when (bottomNavIndex) {
             0 -> {
                 HomeScreen(
-                    modifier = Modifier.padding(innerPadding),
+                    modifier = Modifier
+                        .background(Color(0xFFFFBFC0))
+                        .padding(innerPadding),
                     onGoToProductList = { storeId, storeName ->
                         val encodedName = Uri.encode(storeName)
                         navController.navigate("products/$storeId/$encodedName")

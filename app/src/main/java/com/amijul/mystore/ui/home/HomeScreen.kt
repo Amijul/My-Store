@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -62,8 +63,8 @@ fun HomeScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            //.background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp)
     ) {
 
         // 🔹 Header: Location + small tagline
@@ -169,7 +170,7 @@ fun HomeScreen(
                 .fillMaxSize(),
             //tonalElevation = 1.dp,
             shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surface
+            color = Color.Transparent
         ) {
             when {
                 state.isLoading -> {
@@ -212,8 +213,9 @@ fun HomeScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                            //.padding(vertical = 8.dp),
+
+                        ,verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(filteredStores) { store ->
                             StoreCard(

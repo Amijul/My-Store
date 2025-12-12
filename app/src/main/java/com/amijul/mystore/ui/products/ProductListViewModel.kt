@@ -24,6 +24,9 @@ class ProductListViewModel(
     private val _uiState = MutableStateFlow(ProductListUiState())
     val uiState: StateFlow<ProductListUiState> = _uiState.asStateFlow()
 
+    private val _selectedProduct = MutableStateFlow<ProductUiModel?>(null)
+    val selectedProduct: StateFlow<ProductUiModel?> = _selectedProduct.asStateFlow()
+
     init {
         loadProducts()
     }
@@ -46,6 +49,15 @@ class ProductListViewModel(
                 )
             }
         }
+    }
+
+    fun selectProduct(productId: String) {
+        _selectedProduct.value = _uiState.value.products.firstOrNull { it.id == productId}
+
+    }
+
+    fun clearSelectedProduct() {
+        _selectedProduct.value = null
     }
 }
 

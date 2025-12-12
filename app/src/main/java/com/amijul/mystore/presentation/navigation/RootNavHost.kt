@@ -1,11 +1,14 @@
 package com.amijul.mystore.presentation.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.amijul.mystore.ui.products.productdetails.ProductDetailScreen
 import com.amijul.mystore.ui.products.ProductListScreen
 import com.amijul.mystore.ui.products.ProductListViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -41,8 +44,54 @@ fun RootNavHost() {
 
             ProductListScreen(
                 viewModel = viewModel,
-                storeName = storeName
+                storeName = storeName,
+                onOpenProductDetail = {
+                    navController.navigate("productDetail/$storeId/${Uri.encode(storeName)}")
+                }
+            )
+
+        }
+
+        composable(
+            route = "productDetail/{storeId}/{storeName}",
+            arguments = listOf(
+                navArgument("storeId") { type = NavType.StringType },
+                navArgument("storeName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+
+            val storeId = backStackEntry.arguments?.getString("storeId") ?: return@composable
+            val storeName = backStackEntry.arguments?.getString("storeName") ?: ""
+
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry("products/{storeId}/{storeName}")
+            }
+
+            val viewModel: ProductListViewModel = koinViewModel(
+                viewModelStoreOwner = parentEntry,
+                parameters = { parametersOf(storeId) }
+            )
+
+            ProductDetailScreen(
+                viewModel = viewModel,
+                storeName = storeName,
+                onBack = {
+                    viewModel.clearSelectedProduct()
+                    navController.popBackStack()
+                },
+                onAddToCart = { product, qty ->
+
+                },
+                onProceedToCheckout = {
+
+                }
             )
         }
+
     }
 }
+
+
+
+
+
