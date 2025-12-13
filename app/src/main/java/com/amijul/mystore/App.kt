@@ -3,6 +3,7 @@ package com.amijul.mystore
 import android.app.Application
 import com.amijul.mystore.data.remote.ProductFirestoreDataSource
 import com.amijul.mystore.data.remote.StoreFirestoreDataSource
+import com.amijul.mystore.ui.cart.CartViewModel
 import com.amijul.mystore.ui.home.HomeViewModel
 import com.amijul.mystore.ui.products.ProductListViewModel
 import com.google.firebase.firestore.FirebaseFirestore
@@ -42,4 +43,6 @@ private val appModule = module {
             productRemote = get()
         )
     }
+
+    viewModel { CartViewModel() }
 }

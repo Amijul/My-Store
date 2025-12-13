@@ -29,7 +29,7 @@ class ProductFirestoreDataSource(
             ProductUiModel(
                 id = id,
                 name = name,
-                price = priceNumber,
+                price = priceNumber.toFloat(),
                 unit = unit,
                 imageUrl = imageUrl,
                 inStock = inStock

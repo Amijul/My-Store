@@ -51,6 +51,7 @@ fun BottomNavBar( homeViewModel: HomeViewModel = koinViewModel()) {
                 selected = selected,
                 onClick = {
                     homeViewModel.setBottomNav(index = index)
+
                 },
                 icon = item.icon,
                 label = { Text(item.label) },

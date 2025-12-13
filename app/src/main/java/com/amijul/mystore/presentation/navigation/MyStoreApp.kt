@@ -22,6 +22,9 @@ import com.amijul.mystore.ui.home.HomeViewModel
 import com.amijul.mystore.ui.order.OrderScreen
 import org.koin.androidx.compose.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.amijul.mystore.domain.account.AccountNavAction
+import com.amijul.mystore.domain.account.AccountUi
+import com.amijul.mystore.domain.navigation.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,9 +66,30 @@ fun MyStoreApp(
 
             2 -> {
                 AccountScreen(
-                    modifier = Modifier.padding(innerPadding)
+                    modifier = Modifier.padding(innerPadding),
+                    accountUi = AccountUi(
+                        name = "Amijul",
+                        email = "email",
+                        photoUrl = ""
+                    ),
+                    onItemClick = { action ->
+                        when (action) {
+                            AccountNavAction.Orders -> {
+                                // If your Orders is tab index 1, just switch tab:
+                                homeViewModel.setBottomNav(1) // implement if not exists
+                            }
+                            AccountNavAction.MyDetails -> navController.navigate(Routes.MyDetails.route)
+                            AccountNavAction.DeliveryAddress -> navController.navigate(Routes.DeliveryAddress.route)
+                            AccountNavAction.Help -> navController.navigate(Routes.Help.route)
+                            AccountNavAction.About -> navController.navigate(Routes.About.route)
+                        }
+                    },
+                    onLogout = {
+                        navController.navigate(Routes.Login.route) { popUpTo(0) }
+                    }
                 )
             }
+
         }
     }
 }

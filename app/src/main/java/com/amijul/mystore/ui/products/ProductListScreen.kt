@@ -33,11 +33,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.amijul.mystore.domain.product.ProductUiModel
+import com.amijul.mystore.ui.cart.CartViewModel
+import com.amijul.mystore.ui.products.component.ProductGrid
 import com.amijul.mystore.ui.products.component.ProductGridItem
 
 @Composable
 fun ProductListScreen(
     viewModel: ProductListViewModel,
+    cartViewModel: CartViewModel,
     storeName: String,
     onOpenProductDetail: () -> Unit
 ) {
@@ -133,52 +136,20 @@ fun ProductListScreen(
             else -> {
                 ProductGrid(
                     products = filteredProducts,
+                    cartViewModel = cartViewModel,
                     onProductClick = { product ->
-                        viewModel.selectProduct(product.id)   // ✅ store selected in VM
-                        onOpenProductDetail()                 // ✅ navigate (no refetch)
+                        viewModel.selectProduct(product.id)
+                        onOpenProductDetail()
                     }
                 )
+
             }
         }
     }
 }
 
-@Composable
-fun ProductGrid(
-    products: List<ProductUiModel>,
-    onProductClick: (ProductUiModel) -> Unit
-) {
-    val quantities = remember { mutableStateMapOf<String, Int>() }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        modifier = Modifier.fillMaxSize().padding(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 24.dp)
-    ) {
-        items(products) { product ->
-            val qty = quantities[product.id] ?: 0
-            ProductGridItem(
-                product = product,
-                quantity = qty,
-                onAddFirstTime = {
-                    quantities[product.id] = 1
-                },
-                onClick = { onProductClick(product) },
-                onIncrease = {
-                    val current = quantities[product.id] ?: 0
-                    quantities[product.id] = current + 1
-                },
-                onDecrease = {
-                    val current = quantities[product.id] ?: 0
-                    val newValue = (current - 1).coerceAtLeast(0)
-                    if (newValue == 0) quantities.remove(product.id) else quantities[product.id] = newValue
-                }
-            )
-        }
-    }
-}
+
 
 
 
