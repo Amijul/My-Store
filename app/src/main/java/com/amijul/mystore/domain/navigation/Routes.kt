@@ -9,7 +9,8 @@ sealed class Routes(val route: String) {
     data object Account: Routes("account")
     data object Orders: Routes("orders")
     data object MyDetails: Routes("myDetails")
-    data object DeliveryAddress: Routes("address")
+    data object Addresses: Routes("addresses")
+    data object EditAddress: Routes("editAddress")
     data object Help: Routes("help")
     data object About: Routes("about")
 

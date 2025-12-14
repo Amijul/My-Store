@@ -79,7 +79,7 @@ fun MyStoreApp(
                                 homeViewModel.setBottomNav(1) // implement if not exists
                             }
                             AccountNavAction.MyDetails -> navController.navigate(Routes.MyDetails.route)
-                            AccountNavAction.DeliveryAddress -> navController.navigate(Routes.DeliveryAddress.route)
+                            AccountNavAction.DeliveryAddress -> navController.navigate(Routes.EditAddress.route)
                             AccountNavAction.Help -> navController.navigate(Routes.Help.route)
                             AccountNavAction.About -> navController.navigate(Routes.About.route)
                         }

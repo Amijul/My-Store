@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Logout
@@ -53,7 +54,7 @@ fun AccountScreen(
 ) {
     val bg = Color(0xFFF3F4F6) // soft light background like screenshot
     val items = listOf(
-        AccountRowItem("Orders", Icons.Filled.ReceiptLong) { onItemClick(AccountNavAction.Orders) },
+        AccountRowItem("Orders", Icons.AutoMirrored.Filled.ReceiptLong) { onItemClick(AccountNavAction.Orders) },
         AccountRowItem("My Details", Icons.Filled.VerifiedUser) { onItemClick(AccountNavAction.MyDetails) },
         AccountRowItem("Delivery Address", Icons.Filled.LocationOn) { onItemClick(AccountNavAction.DeliveryAddress) },
         AccountRowItem("Help", Icons.Filled.SupportAgent) { onItemClick(AccountNavAction.Help) },

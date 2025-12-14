@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -41,7 +40,7 @@ fun SwipeProceedButton(
     val thumbSize = 48.dp
     val shape = RoundedCornerShape(999.dp)
 
-    var trackWidthPx by remember { mutableStateOf(0f) }
+    var trackWidthPx by remember { mutableFloatStateOf(0f) }
     val thumbOffsetX = remember { Animatable(0f) }
 
     val density = LocalDensity.current

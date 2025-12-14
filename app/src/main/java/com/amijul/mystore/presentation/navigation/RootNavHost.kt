@@ -22,6 +22,9 @@ import com.amijul.mystore.presentation.auth.AuthViewModel
 import com.amijul.mystore.presentation.auth.LoginScreen
 import com.amijul.mystore.presentation.auth.SignUpScreen
 import com.amijul.mystore.presentation.navigation.component.AuthGateLoading
+import com.amijul.mystore.ui.account.address.EditAddressScreen
+import com.amijul.mystore.ui.account.address.EditAddressViewModel
+import com.amijul.mystore.ui.account.profile.EditUserProfileScreen
 import com.amijul.mystore.ui.cart.CartScreen
 import com.amijul.mystore.ui.cart.CartViewModel
 import com.amijul.mystore.ui.products.ProductListScreen
@@ -172,10 +175,21 @@ fun RootNavHost(
         }
 
 
-        composable(Routes.MyDetails.route) { Text("My Details") }
-        composable(Routes.DeliveryAddress.route) { Text("Delivery Address") }
+        composable(Routes.MyDetails.route) {
+            EditUserProfileScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.Addresses.route) { Text("Addresses") }
         composable(Routes.Help.route) { Text("Help") }
         composable(Routes.About.route) { Text("About") }
+
+        composable("editAddress") {
+            EditAddressScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
 
 
 

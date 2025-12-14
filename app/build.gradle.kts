@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
     id("org.jetbrains.kotlin.plugin.serialization") version "2.2.21"
+    alias(libs.plugins.ksp) // ✅ this now resolves with version from libs.versions.toml
 }
 
 android {
@@ -100,6 +101,13 @@ dependencies {
     // build.gradle.kts (app) – inside dependencies { ... }
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
+        // room db
+    implementation("androidx.room:room-runtime:2.8.4")
+    ksp("androidx.room:room-compiler:2.8.4")
+    implementation("androidx.room:room-ktx:2.8.4")
+
+
+    //===========================
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 }
