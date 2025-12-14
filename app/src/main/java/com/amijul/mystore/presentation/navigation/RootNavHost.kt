@@ -1,37 +1,97 @@
 package com.amijul.mystore.presentation.navigation
 
 import android.net.Uri
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.amijul.mystore.domain.account.AccountNavAction
-import com.amijul.mystore.domain.account.AccountUi
-import com.amijul.mystore.domain.cart.CartItemUi
 import com.amijul.mystore.domain.navigation.Routes
-import com.amijul.mystore.ui.account.AccountScreen
+import com.amijul.mystore.presentation.auth.AuthViewModel
+import com.amijul.mystore.presentation.auth.LoginScreen
+import com.amijul.mystore.presentation.auth.SignUpScreen
+import com.amijul.mystore.presentation.navigation.component.AuthGateLoading
 import com.amijul.mystore.ui.cart.CartScreen
 import com.amijul.mystore.ui.cart.CartViewModel
-import com.amijul.mystore.ui.products.productdetails.ProductDetailScreen
 import com.amijul.mystore.ui.products.ProductListScreen
 import com.amijul.mystore.ui.products.ProductListViewModel
+import com.amijul.mystore.ui.products.productdetails.ProductDetailScreen
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 @Composable
 fun RootNavHost(
-    cartViewModel: CartViewModel = koinViewModel()
+    cartViewModel: CartViewModel = koinViewModel(),
+    authViewModel: AuthViewModel = koinViewModel()
 ) {
     val navController = rememberNavController()
 
+
     NavHost(
         navController = navController,
-        startDestination = Routes.Main.route
+        startDestination = Routes.AuthGate.route
     ) {
+
+        composable(Routes.AuthGate.route) {
+
+            val loggedIn by authViewModel.loggedIn.collectAsStateWithLifecycle()
+
+            LaunchedEffect(loggedIn) {
+                if (loggedIn) {
+                    navController.navigate(Routes.Main.route) {
+                        popUpTo(Routes.AuthGate.route) { inclusive = true }
+                        launchSingleTop = true
+                        restoreState = false
+                    }
+                } else {
+                    navController.navigate(Routes.SignIn.route) {
+                        popUpTo(Routes.AuthGate.route) { inclusive = true }
+                        launchSingleTop = true
+                        restoreState = false
+                    }
+                }
+            }
+
+            AuthGateLoading()
+
+        }
+
+        composable(Routes.SignIn.route) {
+            LoginScreen(
+                authViewModel = authViewModel,
+                onGoSignUp = { navController.navigate(Routes.SignUp.route) },
+                onLoggedIn = {
+                    navController.navigate(Routes.Main.route) {
+                        popUpTo(Routes.AuthGate.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Routes.SignUp.route) {
+            SignUpScreen(
+                authViewModel = authViewModel,
+                onBackToLogin = { navController.popBackStack() },
+                onSignedUp = {
+                    navController.navigate(Routes.Main.route) {
+                        popUpTo(Routes.AuthGate.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+
         // Main tabbed area (home / orders / account)
         composable(Routes.Main.route) {
             MyStoreApp(navController = navController)
@@ -116,7 +176,6 @@ fun RootNavHost(
         composable(Routes.DeliveryAddress.route) { Text("Delivery Address") }
         composable(Routes.Help.route) { Text("Help") }
         composable(Routes.About.route) { Text("About") }
-        composable(Routes.Login.route) { Text("Login") }
 
 
 

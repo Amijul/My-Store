@@ -1,8 +1,9 @@
 package com.amijul.mystore.domain.navigation
 
 sealed class Routes(val route: String) {
-    data object Login: Routes("login")
-    data object Logout: Routes("logout")
+    data object AuthGate: Routes("authGate")
+    data object SignIn: Routes("signIn")
+    data object SignUp: Routes("signup")
     data object Main: Routes("main")
     data object Cart: Routes("cart")
     data object Account: Routes("account")

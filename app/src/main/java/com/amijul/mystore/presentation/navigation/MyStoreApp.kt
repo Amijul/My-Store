@@ -7,8 +7,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -25,12 +23,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.amijul.mystore.domain.account.AccountNavAction
 import com.amijul.mystore.domain.account.AccountUi
 import com.amijul.mystore.domain.navigation.Routes
+import com.amijul.mystore.presentation.auth.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyStoreApp(
     navController: NavController,
-    homeViewModel: HomeViewModel = koinViewModel()
+    homeViewModel: HomeViewModel = koinViewModel(),
+    authViewModel: AuthViewModel = koinViewModel(),
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -85,8 +85,13 @@ fun MyStoreApp(
                         }
                     },
                     onLogout = {
-                        navController.navigate(Routes.Login.route) { popUpTo(0) }
+                        authViewModel.signOut()
+                        navController.navigate(Routes.AuthGate.route) {
+                            popUpTo(Routes.Main.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
+
                 )
             }
 
