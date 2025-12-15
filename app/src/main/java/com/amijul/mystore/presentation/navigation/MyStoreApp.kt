@@ -8,6 +8,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -24,6 +25,7 @@ import com.amijul.mystore.domain.account.AccountNavAction
 import com.amijul.mystore.domain.account.AccountUi
 import com.amijul.mystore.domain.navigation.Routes
 import com.amijul.mystore.presentation.auth.AuthViewModel
+import com.amijul.mystore.ui.account.AccountViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,11 +33,17 @@ fun MyStoreApp(
     navController: NavController,
     homeViewModel: HomeViewModel = koinViewModel(),
     authViewModel: AuthViewModel = koinViewModel(),
+    accountViewModel: AccountViewModel = koinViewModel()
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
     // read current tab from ViewModel
     val bottomNavIndex by homeViewModel.bottomNav.collectAsStateWithLifecycle()
+    val accountState by accountViewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) {
+        accountViewModel.start()
+    }
+
 
     Scaffold(
         snackbarHost = {
@@ -67,11 +75,7 @@ fun MyStoreApp(
             2 -> {
                 AccountScreen(
                     modifier = Modifier.padding(innerPadding),
-                    accountUi = AccountUi(
-                        name = "Amijul",
-                        email = "email",
-                        photoUrl = ""
-                    ),
+                    accountUi = accountState.accountUi ,
                     onItemClick = { action ->
                         when (action) {
                             AccountNavAction.Orders -> {

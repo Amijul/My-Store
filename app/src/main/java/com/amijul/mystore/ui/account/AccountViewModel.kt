@@ -2,87 +2,55 @@ package com.amijul.mystore.ui.account
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.amijul.mystore.data.local.address.AddressEntity
-import com.amijul.mystore.data.local.user.UserEntity
-import com.amijul.mystore.domain.address.AddressLocalRepository
+import com.amijul.mystore.domain.account.AccountUi
 import com.amijul.mystore.domain.user.UserLocalRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class AccountLocalUiState(
+data class AccountState(
     val isLoading: Boolean = true,
-    val user: UserEntity? = null,
-    val addresses: List<AddressEntity> = emptyList(),
-    val defaultAddress: AddressEntity? = null,
+    val accountUi: AccountUi = AccountUi(name = "", email = "", photoUrl = null),
     val error: String? = null
 )
 
 class AccountViewModel(
     private val userIdProvider: () -> String?,
-    private val userLocalRepo: UserLocalRepository,
-    private val addressLocalRepo: AddressLocalRepository
+    private val userLocalRepo: UserLocalRepository
 ) : ViewModel() {
 
-    private fun userLocalFlow(): Flow<UserEntity?> {
+    private val _state = MutableStateFlow(AccountState())
+    val state: StateFlow<AccountState> = _state.asStateFlow()
+
+    fun start() {
         val uid = userIdProvider().orEmpty()
-        return if (uid.isBlank()) flowOf(null)
-        else userLocalRepo.observeUser(uid)
-    }
-
-    private fun addressesFlow(): Flow<List<AddressEntity>> {
-        val uid = userIdProvider().orEmpty()
-        return if (uid.isBlank()) flowOf<List<AddressEntity>>(emptyList())
-        else addressLocalRepo.observeAddresses(uid)
-    }
-
-    private fun defaultAddressFlow(): Flow<AddressEntity?> {
-        val uid = userIdProvider().orEmpty()
-        return if (uid.isBlank()) flowOf(null)
-        else addressLocalRepo.observeDefault(uid)
-    }
-
-    val accountState: StateFlow<AccountLocalUiState> =
-        combine(
-            userLocalFlow(),
-            addressesFlow(),
-            defaultAddressFlow()
-        ) { user, addresses, defaultAddress ->
-            AccountLocalUiState(
-                isLoading = false,
-                user = user,
-                addresses = addresses,
-                defaultAddress = defaultAddress,
-                error = null
-            )
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = AccountLocalUiState()
-        )
-
-    fun setDefaultAddress(addressId: String) {
-        val uid = userIdProvider().orEmpty()
-        if (uid.isBlank()) return
-
-        viewModelScope.launch {
-            addressLocalRepo.setDefaultForUser(uid, addressId)
+        if (uid.isBlank()) {
+            _state.update { it.copy(isLoading = false, error = "User not logged in") }
+            return
         }
-    }
 
-    fun deleteAddress(addressId: String) {
         viewModelScope.launch {
-            addressLocalRepo.delete(addressId)
-        }
-    }
-
-    fun upsertLocalUser(user: UserEntity) {
-        viewModelScope.launch {
-            userLocalRepo.upsert(user)
+            userLocalRepo.observeUser(uid)
+                .catch { e ->
+                    _state.update { it.copy(isLoading = false, error = e.message ?: "Failed to load user") }
+                }
+                .collectLatest { user ->
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            error = null,
+                            accountUi = AccountUi(
+                                name = user?.name.orEmpty(),
+                                email = user?.email.orEmpty(),
+                                photoUrl = user?.imageUrl
+                            )
+                        )
+                    }
+                }
         }
     }
 }

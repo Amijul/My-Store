@@ -184,7 +184,7 @@ fun RootNavHost(
         composable(Routes.Help.route) { Text("Help") }
         composable(Routes.About.route) { Text("About") }
 
-        composable("editAddress") {
+        composable(Routes.EditAddress.route) {
             EditAddressScreen(
                 onBack = { navController.popBackStack() }
             )

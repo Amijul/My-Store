@@ -85,7 +85,6 @@ private val appModule = module {
         AccountViewModel(
             userIdProvider = { get<FirebaseAuth>().currentUser?.uid },
             userLocalRepo = get(),
-            addressLocalRepo = get()
         )
     }
 
