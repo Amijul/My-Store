@@ -93,7 +93,7 @@ fun Carts(
         ) {
             SummaryRow(label = "Sub total", value = "₹${state.subTotal}")
             Spacer(Modifier.height(6.dp))
-            SummaryRow(label = "Shipping", value = "₹${state.shipping}")
+            SummaryRow(label = "Shipping fee", value = "₹${state.shipping}")
             Spacer(Modifier.height(10.dp))
             SummaryRow(
                 label = "Total",
