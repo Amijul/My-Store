@@ -14,8 +14,8 @@ admin.initializeApp();
 export const onAuthUserCreate = functions.auth.user().onCreate(
   async (user: admin.auth.UserRecord): Promise<null> => {
     await admin.firestore().collection("users").doc(user.uid).set(
-      {role:"buyer",status:"active"},
-      {merge:true}
+      {role: "buyer", status: "active"},
+      {merge: true}
     );
     return null;
   }
@@ -83,7 +83,7 @@ export const createOrder = functions.https.onCall(
   async (
     data: unknown,
     context: functions.https.CallableContext
-  ): Promise<{ok:boolean,orderId:string}> => {
+  ): Promise<{ok: boolean, orderId: string}> => {
     if (!context.auth) {
       throw new functions.https.HttpsError(
         "unauthenticated",
@@ -147,7 +147,8 @@ export const createOrder = functions.https.onCall(
       const lineTotal = qty * unitPrice;
       totalAmount += lineTotal;
 
-      return {productId,qty,unitPrice,lineTotal};
+      return {productId: productId, qty: qty, unitPrice: unitPrice,
+        lineTotal: lineTotal};
     });
 
     const orderRef = admin.firestore().collection("orders").doc();
@@ -156,16 +157,16 @@ export const createOrder = functions.https.onCall(
     const order = {
       id: orderRef.id,
       buyerId: context.auth.uid,
-      sellerId,
+      sellerId: sellerId,
       status: "PLACED",
       items: normalizedItems,
-      totalAmount,
+      totalAmount: totalAmount,
       createdAt: now,
       updatedAt: now,
     };
 
     await orderRef.set(order);
 
-    return {ok:true,orderId: orderRef.id};
+    return {ok: true, orderId: orderRef.id};
   }
 );
