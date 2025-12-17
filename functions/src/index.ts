@@ -3,12 +3,17 @@ import * as admin from "firebase-admin";
 
 admin.initializeApp();
 
-// Existing: create /users/{uid} on signup
+/**
+ * Auth trigger: creates/merges a Firestore user profile when a new Firebase Auth user signs up.
+ *
+ * Creates: /users/{uid}
+ * Default fields: role=buyer, status=active
+ */
 export const onAuthUserCreate = functions.auth.user().onCreate(
   async (user: admin.auth.UserRecord) => {
     await admin.firestore().collection("users").doc(user.uid).set(
-      {role: "buyer", status: "active"},
-      {merge: true}
+      { role: "buyer", status: "active" },
+      { merge: true }
     );
     return null;
   }
@@ -26,14 +31,34 @@ type CreateOrderInput = {
   items: CreateOrderItemInput[];
 };
 
+/**
+ * Safely converts an unknown input to a string. Returns empty string if not a string.
+ *
+ * @param value Any input value
+ * @returns A string value or "" if input is not a string
+ */
 function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+/**
+ * Safely converts an unknown input to a number using Number(...).
+ *
+ * Note: Non-numeric strings will become NaN. Caller should validate with Number.isFinite(...).
+ *
+ * @param value Any input value
+ * @returns A number (may be NaN)
+ */
 function asNumber(value: unknown): number {
   return typeof value === "number" ? value : Number(value);
 }
 
+/**
+ * Type guard for validating item inputs received from the client.
+ *
+ * @param value Any input value
+ * @returns True if value is a CreateOrderItemInput-like object
+ */
 function isItemInput(value: unknown): value is CreateOrderItemInput {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
@@ -44,12 +69,22 @@ function isItemInput(value: unknown): value is CreateOrderItemInput {
   );
 }
 
+/**
+ * Callable HTTPS function for buyers to create an order.
+ *
+ * Required:
+ * - Authenticated user (context.auth)
+ * - data.sellerId: string
+ * - data.items: array of { productId, qty, unitPrice }
+ *
+ * @param data Callable request payload
+ * @param context Callable function context (includes auth)
+ * @returns {ok: true, orderId} on success
+ * @throws HttpsError for unauthenticated / invalid-argument cases
+ */
 export const createOrder = functions.https.onCall(async (data, context) => {
   if (!context.auth) {
-    throw new functions.https.HttpsError(
-      "unauthenticated",
-      "Login required."
-    );
+    throw new functions.https.HttpsError("unauthenticated", "Login required.");
   }
 
   const input = data as CreateOrderInput;
@@ -57,17 +92,11 @@ export const createOrder = functions.https.onCall(async (data, context) => {
   const rawItems = input?.items;
 
   if (!sellerId) {
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "sellerId is required."
-    );
+    throw new functions.https.HttpsError("invalid-argument", "sellerId is required.");
   }
 
   if (!Array.isArray(rawItems) || rawItems.length === 0) {
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "items must be a non-empty array."
-    );
+    throw new functions.https.HttpsError("invalid-argument", "items must be a non-empty array.");
   }
 
   let totalAmount = 0;
@@ -85,30 +114,21 @@ export const createOrder = functions.https.onCall(async (data, context) => {
     const unitPrice = asNumber(raw.unitPrice);
 
     if (!productId) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "productId is required."
-      );
+      throw new functions.https.HttpsError("invalid-argument", "productId is required.");
     }
 
     if (!Number.isFinite(qty) || qty <= 0) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "qty must be > 0."
-      );
+      throw new functions.https.HttpsError("invalid-argument", "qty must be > 0.");
     }
 
     if (!Number.isFinite(unitPrice) || unitPrice < 0) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "unitPrice must be >= 0."
-      );
+      throw new functions.https.HttpsError("invalid-argument", "unitPrice must be >= 0.");
     }
 
     const lineTotal = qty * unitPrice;
     totalAmount += lineTotal;
 
-    return {productId, qty, unitPrice, lineTotal};
+    return { productId, qty, unitPrice, lineTotal };
   });
 
   const orderRef = admin.firestore().collection("orders").doc();
@@ -127,5 +147,5 @@ export const createOrder = functions.https.onCall(async (data, context) => {
 
   await orderRef.set(order);
 
-  return {ok: true, orderId: orderRef.id};
+  return { ok: true, orderId: orderRef.id };
 });
