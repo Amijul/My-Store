@@ -15,39 +15,95 @@ export const onAuthUserCreate = functions.auth.user().onCreate(
 );
 
 // New: callable function for buyer to create an order
+type CreateOrderItemInput = {
+  productId: string;
+  qty: number;
+  unitPrice: number;
+};
+
+type CreateOrderInput = {
+  sellerId: string;
+  items: CreateOrderItemInput[];
+};
+
+function asString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function asNumber(value: unknown): number {
+  return typeof value === "number" ? value : Number(value);
+}
+
+function isItemInput(value: unknown): value is CreateOrderItemInput {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.productId === "string" &&
+    typeof v.qty !== "undefined" &&
+    typeof v.unitPrice !== "undefined"
+  );
+}
+
 export const createOrder = functions.https.onCall(async (data, context) => {
-  // 1) Auth required
   if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Login required.");
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "Login required."
+    );
   }
 
-  const buyerId = context.auth.uid;
-
-  // 2) Validate request shape (minimal)
-  const sellerId = String(data?.sellerId ?? "").trim();
-  const items = data?.items;
+  const input = data as CreateOrderInput;
+  const sellerId = asString(input?.sellerId).trim();
+  const rawItems = input?.items;
 
   if (!sellerId) {
-    throw new functions.https.HttpsError("invalid-argument", "sellerId is required.");
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "sellerId is required."
+    );
   }
 
-  if (!Array.isArray(items) || items.length === 0) {
-    throw new functions.https.HttpsError("invalid-argument", "items must be a non-empty array.");
+  if (!Array.isArray(rawItems) || rawItems.length === 0) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "items must be a non-empty array."
+    );
   }
 
-  // 3) Normalize + validate items (minimal safe version)
-  // NOTE: For real commerce, prices should come from your server-side catalog.
-  // Here we compute totals from client-provided unitPrice as a placeholder.
   let totalAmount = 0;
 
-  const normalizedItems = items.map((it: any) => {
-    const productId = String(it?.productId ?? "").trim();
-    const qty = Number(it?.qty ?? 0);
-    const unitPrice = Number(it?.unitPrice ?? 0);
+  const normalizedItems = rawItems.map((raw) => {
+    if (!isItemInput(raw)) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Each item must have productId, qty, unitPrice."
+      );
+    }
 
-    if (!productId) throw new functions.https.HttpsError("invalid-argument", "productId required.");
-    if (!Number.isFinite(qty) || qty <= 0) throw new functions.https.HttpsError("invalid-argument", "qty must be > 0.");
-    if (!Number.isFinite(unitPrice) || unitPrice < 0) throw new functions.https.HttpsError("invalid-argument", "unitPrice must be >= 0.");
+    const productId = raw.productId.trim();
+    const qty = asNumber(raw.qty);
+    const unitPrice = asNumber(raw.unitPrice);
+
+    if (!productId) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "productId is required."
+      );
+    }
+
+    if (!Number.isFinite(qty) || qty <= 0) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "qty must be > 0."
+      );
+    }
+
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "unitPrice must be >= 0."
+      );
+    }
 
     const lineTotal = qty * unitPrice;
     totalAmount += lineTotal;
@@ -55,13 +111,12 @@ export const createOrder = functions.https.onCall(async (data, context) => {
     return {productId, qty, unitPrice, lineTotal};
   });
 
-  // 4) Create Firestore order (server authoritative fields)
   const orderRef = admin.firestore().collection("orders").doc();
   const now = admin.firestore.FieldValue.serverTimestamp();
 
   const order = {
     id: orderRef.id,
-    buyerId,
+    buyerId: context.auth.uid,
     sellerId,
     status: "PLACED",
     items: normalizedItems,
@@ -72,6 +127,5 @@ export const createOrder = functions.https.onCall(async (data, context) => {
 
   await orderRef.set(order);
 
-  // 5) Return order id to client
   return {ok: true, orderId: orderRef.id};
 });
