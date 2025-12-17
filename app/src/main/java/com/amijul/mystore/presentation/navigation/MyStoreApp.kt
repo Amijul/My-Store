@@ -67,9 +67,7 @@ fun MyStoreApp(
             }
 
             1 -> {
-                OrderScreen(
-                    modifier = Modifier.padding(innerPadding)
-                )
+                OrderScreen()
             }
 
             2 -> {
@@ -91,7 +89,7 @@ fun MyStoreApp(
                     onLogout = {
                         authViewModel.signOut()
                         navController.navigate(Routes.AuthGate.route) {
-                            popUpTo(Routes.Main.route) { inclusive = true }
+                            popUpTo(0) { inclusive = true }
                             launchSingleTop = true
                         }
                     }

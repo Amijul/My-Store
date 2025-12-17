@@ -45,9 +45,12 @@ import androidx.compose.foundation.clickable
 fun ProductGridItem(
     product: ProductUiModel,
     quantity: Int,
-    cartViewModel: CartViewModel,
-    onOpenDetails: () -> Unit
-) {
+    onOpenDetails: () -> Unit,
+    onAddFirstTime: () -> Unit,
+    onIncrease: () -> Unit,
+    onDecrease: () -> Unit
+)
+ {
     val inCart = quantity > 0
     val enabled = product.inStock
 
@@ -132,16 +135,7 @@ fun ProductGridItem(
                         enabled = enabled,
                         onClick = {
                             if (!enabled) return@Button
-                            cartViewModel.addToCart(
-                                CartItemUi(
-                                    id = product.id,
-                                    name = product.name,
-                                    price = product.price,
-                                    imageUrl = product.imageUrl,
-                                    quantity = 1
-                                ),
-                                qty = 1
-                            )
+                            onAddFirstTime()
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -176,9 +170,9 @@ fun ProductGridItem(
                             enabled = enabled,
                             onClick = {
                                 if (!enabled) return@IconButton
-                                if (quantity <= 1) cartViewModel.remove(product.id)
-                                else cartViewModel.decrease(product.id)
+                                onDecrease()
                             }
+
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Remove,
@@ -196,8 +190,9 @@ fun ProductGridItem(
                             enabled = enabled,
                             onClick = {
                                 if (!enabled) return@IconButton
-                                cartViewModel.increase(product.id)
+                                onIncrease()
                             }
+
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,

@@ -22,6 +22,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -32,21 +33,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.amijul.mystore.domain.product.ProductUiModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.amijul.mystore.ui.cart.CartViewModel
 import com.amijul.mystore.ui.products.component.ProductGrid
-import com.amijul.mystore.ui.products.component.ProductGridItem
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun ProductListScreen(
     viewModel: ProductListViewModel,
-    cartViewModel: CartViewModel,
+    cartViewModel: CartViewModel = koinViewModel(),
     storeName: String,
     onOpenProductDetail: () -> Unit
 ) {
+    LaunchedEffect(Unit) {
+        cartViewModel.start()
+    }
+    val cartState by cartViewModel.state.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
+    val qtyByProductId = remember(cartState.items) {
+        cartState.items.associate { it.id to it.quantity } // id = productId in your CartItemUi
+    }
     // Filter products by name
     val filteredProducts = remember(searchQuery, state.products) {
         if (searchQuery.isBlank()) state.products
@@ -136,12 +144,30 @@ fun ProductListScreen(
             else -> {
                 ProductGrid(
                     products = filteredProducts,
-                    cartViewModel = cartViewModel,
+                    qtyByProductId = qtyByProductId,
+                    onAdd = { p ->
+                        cartViewModel.addToCart(
+                            item = com.amijul.mystore.domain.cart.CartItemUi(
+                                id = p.id,
+                                name = p.name,
+                                price = p.price,
+                                quantity = 1,
+                                imageUrl = p.imageUrl
+                            ),
+                            qty = 1
+                        )
+                    },
+                    onIncrease = { productId -> cartViewModel.increase(productId) },
+                    onDecrease = { productId ->
+                        val q = qtyByProductId[productId] ?: 0
+                        if (q <= 1) cartViewModel.remove(productId) else cartViewModel.decrease(productId)
+                    },
                     onProductClick = { product ->
                         viewModel.selectProduct(product.id)
                         onOpenProductDetail()
                     }
                 )
+
 
             }
         }

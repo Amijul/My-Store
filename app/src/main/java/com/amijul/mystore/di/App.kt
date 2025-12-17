@@ -5,12 +5,16 @@ import androidx.room.Room
 import com.amijul.mystore.data.auth.AuthRepositoryImpl
 import com.amijul.mystore.data.local.address.AddressDao
 import com.amijul.mystore.data.local.address.AddressLocalRepositoryImpl
+import com.amijul.mystore.data.local.cart.CartLocalRepositoryImpl
 import com.amijul.mystore.data.local.db.LocalDatabase
+import com.amijul.mystore.data.local.order.OrderLocalRepositoryImpl
 import com.amijul.mystore.data.local.user.UserLocalRepositoryImpl
 import com.amijul.mystore.data.remote.ProductFirestoreDataSource
 import com.amijul.mystore.data.remote.StoreFirestoreDataSource
 import com.amijul.mystore.domain.address.AddressLocalRepository
 import com.amijul.mystore.domain.auth.AuthRepository
+import com.amijul.mystore.domain.cart.CartLocalRepository
+import com.amijul.mystore.domain.order.OrderLocalRepository
 import com.amijul.mystore.domain.user.UserLocalRepository
 import com.amijul.mystore.presentation.auth.AuthViewModel
 import com.amijul.mystore.ui.account.AccountViewModel
@@ -18,6 +22,7 @@ import com.amijul.mystore.ui.account.address.EditAddressViewModel
 import com.amijul.mystore.ui.account.profile.EditUserProfileViewModel
 import com.amijul.mystore.ui.cart.CartViewModel
 import com.amijul.mystore.ui.home.HomeViewModel
+import com.amijul.mystore.ui.order.OrderViewModel
 import com.amijul.mystore.ui.products.ProductListViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -52,10 +57,13 @@ private val appModule = module {
 
     single { get<LocalDatabase>().userDao() }
     single { get<LocalDatabase>().addressDao() }
+    single { get<LocalDatabase>().cartDao() }
+    single { get<LocalDatabase>().orderDao() }
 
     single<UserLocalRepository> { UserLocalRepositoryImpl(get()) }
     single<AddressLocalRepository> { AddressLocalRepositoryImpl(get()) }
-
+    single<CartLocalRepository> { CartLocalRepositoryImpl(get()) }
+    single<OrderLocalRepository> { OrderLocalRepositoryImpl(get()) }
 
     // Firestore singleton
     single { FirebaseFirestore.getInstance() }
@@ -78,7 +86,19 @@ private val appModule = module {
         )
     }
 
-    viewModel { CartViewModel() }
+    viewModel { CartViewModel(
+        userIdProvider = { get<FirebaseAuth>().currentUser?.uid },
+        cartRepo = get()
+    ) }
+
+    viewModel {
+        OrderViewModel(
+            userIdProvider = { get<FirebaseAuth>().currentUser?.uid },
+            addressDao = get(),
+            cartRepo = get(),
+            orderRepo = get()
+        )
+    }
     viewModel { AuthViewModel(get()) }
 
     viewModel {

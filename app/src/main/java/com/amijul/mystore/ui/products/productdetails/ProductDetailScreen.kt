@@ -30,17 +30,22 @@ import com.amijul.mystore.ui.products.productdetails.components.QtyStepper
 import com.amijul.mystore.ui.products.productdetails.components.RatingStars
 import com.amijul.mystore.ui.products.productdetails.components.StockPill
 import com.amijul.mystore.ui.products.productdetails.components.SwipeProceedButton
+import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailScreen(
     storeName: String,
     viewModel: ProductListViewModel,
-    cartViewModel: CartViewModel,
+    cartViewModel: CartViewModel = koinViewModel(),
     onBack: () -> Unit,
     onProceedToCheckout: () -> Unit,
     onNavigation: () -> Unit,
 ) {
+    LaunchedEffect(Unit) {
+        cartViewModel.start()
+    }
+
     val product by viewModel.selectedProduct.collectAsStateWithLifecycle()
     val cartState by cartViewModel.state.collectAsStateWithLifecycle()
     val cartQty = cartState.items.firstOrNull { it.id == product?.id }?.quantity ?: 0

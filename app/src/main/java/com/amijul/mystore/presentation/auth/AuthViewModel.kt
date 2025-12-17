@@ -46,7 +46,9 @@ class AuthViewModel(
         _authState.value = _authState.value.copy(password = v, error = null)
     }
 
-    fun signOut() = authRepo.signOut()
+    fun signOut() {
+        authRepo.signOut()
+    }
 
     fun signIn(onSuccess: () -> Unit) {
         val email = _authState.value.email.trim()

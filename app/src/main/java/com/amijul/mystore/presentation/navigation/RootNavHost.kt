@@ -23,10 +23,8 @@ import com.amijul.mystore.presentation.auth.LoginScreen
 import com.amijul.mystore.presentation.auth.SignUpScreen
 import com.amijul.mystore.presentation.navigation.component.AuthGateLoading
 import com.amijul.mystore.ui.account.address.EditAddressScreen
-import com.amijul.mystore.ui.account.address.EditAddressViewModel
 import com.amijul.mystore.ui.account.profile.EditUserProfileScreen
 import com.amijul.mystore.ui.cart.CartScreen
-import com.amijul.mystore.ui.cart.CartViewModel
 import com.amijul.mystore.ui.products.ProductListScreen
 import com.amijul.mystore.ui.products.ProductListViewModel
 import com.amijul.mystore.ui.products.productdetails.ProductDetailScreen
@@ -35,7 +33,6 @@ import org.koin.core.parameter.parametersOf
 
 @Composable
 fun RootNavHost(
-    cartViewModel: CartViewModel = koinViewModel(),
     authViewModel: AuthViewModel = koinViewModel()
 ) {
     val navController = rememberNavController()
@@ -117,7 +114,6 @@ fun RootNavHost(
 
             ProductListScreen(
                 viewModel = viewModel,
-                cartViewModel = cartViewModel,
                 storeName = storeName,
                 onOpenProductDetail = {
                     navController.navigate("productDetail/$storeId/${Uri.encode(storeName)}")
@@ -149,7 +145,6 @@ fun RootNavHost(
 
             ProductDetailScreen(
                 viewModel = viewModel,
-                cartViewModel = cartViewModel,
                 storeName = storeName,
                 onBack = {
                     viewModel.clearSelectedProduct()
@@ -166,7 +161,6 @@ fun RootNavHost(
 
         composable(Routes.Cart.route){
             CartScreen(
-                cartViewModel = cartViewModel,
                 onBack = { navController.popBackStack() },
                 onProceedCheckout = {
                     // next: navigate to checkout route (later)
