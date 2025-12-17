@@ -66,7 +66,7 @@ class OrderViewModel(
     fun start() {
         val uid = userIdProvider().orEmpty()
         if (uid.isBlank()) {
-            _state.value = OrderUiState(isLoading = false, message = "User not logged in")
+            _state.value = OrderUiState(isLoading = false, message = "User is not logged in")
             return
         }
 
