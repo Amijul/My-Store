@@ -368,8 +368,13 @@ export const createOrder = functions.https.onCall(
       const lineTotal = qty * unitPrice;
       totalAmount += lineTotal;
 
-      return {productId: productId, qty: qty, unitPrice: unitPrice,
-        lineTotal: lineTotal};
+      return {
+        productId: productId,
+        qty: qty,
+        unitPrice: unitPrice,
+        lineTotal: lineTotal,
+      };
+
     });
 
     const orderRef = admin.firestore().collection("orders").doc();
