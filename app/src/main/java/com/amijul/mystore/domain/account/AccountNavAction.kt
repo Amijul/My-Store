@@ -6,4 +6,6 @@ sealed class AccountNavAction {
     data object DeliveryAddress : AccountNavAction()
     data object Help : AccountNavAction()
     data object About : AccountNavAction()
+    data object SellerUpgrade : AccountNavAction()
+
 }

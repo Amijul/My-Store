@@ -9,6 +9,9 @@ data class OrderEntity(
     @PrimaryKey val orderId: String,
     val userId: String,
 
+    val storeId: String,
+    val storeName: String,
+
     val status: String,            // "PENDING" / "DELIVERED"
     val createdAtMillis: Long,
 

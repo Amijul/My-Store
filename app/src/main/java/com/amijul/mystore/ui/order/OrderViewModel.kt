@@ -1,6 +1,5 @@
 package com.amijul.mystore.ui.order
 
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.amijul.mystore.data.local.address.AddressDao
@@ -8,7 +7,11 @@ import com.amijul.mystore.data.local.order.OrderEntity
 import com.amijul.mystore.data.local.order.OrderItemEntity
 import com.amijul.mystore.domain.cart.CartLocalRepository
 import com.amijul.mystore.domain.order.OrderLocalRepository
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -16,12 +19,14 @@ import java.util.Locale
 import java.util.UUID
 
 data class OrderItemUi(
+    val storeId: String,
     val productId: String,
     val name: String,
     val imageUrl: String,
     val unitPrice: Float,
     val quantity: Int
-) {
+)
+ {
     val lineTotal: Float get() = unitPrice * quantity
 }
 
@@ -73,23 +78,8 @@ class OrderViewModel(
         viewModelScope.launch {
             combine(
                 addressDao.observeDefault(uid),
-                cartRepo.observeCart(uid),
                 orderRepo.observeOrders(uid)
-            ) { addr, cart, orders ->
-
-                val items = cart.map {
-                    OrderItemUi(
-                        productId = it.productId,
-                        name = it.name,
-                        imageUrl = it.imageUrl,
-                        unitPrice = it.unitPrice,
-                        quantity = it.quantity
-                    )
-                }
-
-                val subTotal = items.sumOf { (it.unitPrice * it.quantity).toDouble() }.toFloat()
-                val shipping = if (items.isEmpty()) 0f else 40f
-                val total = subTotal + shipping
+            ) { addr, orders ->
 
                 val addressText = if (addr == null) "" else buildString {
                     append("${addr.fullName} • ${addr.phone}\n")
@@ -104,7 +94,7 @@ class OrderViewModel(
                         orderId = o.orderId,
                         status = o.status,
                         dateText = df.format(Date(o.createdAtMillis)),
-                        itemCount = 0, // (optional) we can compute later by joining items table
+                        itemCount = 0, // optional: join items later
                         total = o.grandTotal
                     )
                 }
@@ -114,8 +104,8 @@ class OrderViewModel(
                     active = ActiveOrderUi(
                         addressText = addressText,
                         hasAddress = addr != null,
-                        items = items,
-                        price = OrderPriceUi(subTotal = subTotal, shipping = shipping, total = total)
+                        items = emptyList(), // Orders tab does not depend on cart
+                        price = OrderPriceUi()
                     ),
                     past = pastUi,
                     message = null
@@ -126,17 +116,17 @@ class OrderViewModel(
         }
     }
 
-    fun buyNow() {
+    /**
+     * This should be called from Checkout flow (store-scoped), not Orders tab.
+     * It creates local order snapshot and clears only the current store cart.
+     */
+    fun buyNow(storeId: String, storeName: String) {
         val uid = userIdProvider().orEmpty()
         if (uid.isBlank()) return
 
         val current = _state.value
         if (!current.active.hasAddress) {
             _state.value = current.copy(message = "Add a delivery address first.")
-            return
-        }
-        if (current.active.items.isEmpty()) {
-            _state.value = current.copy(message = "Cart is empty. Add something tasty first.")
             return
         }
 
@@ -146,22 +136,44 @@ class OrderViewModel(
                 return@launch
             }
 
+            // NEW: one-shot cart snapshot
+            val cart = cartRepo.getCartOnce(uid, storeId)
+            if (cart.isEmpty()) {
+                _state.value = _state.value.copy(message = "Cart is empty.")
+                return@launch
+            }
+
+            val items = cart.map {
+                OrderItemUi(
+                    storeId = it.storeId,
+                    productId = it.productId,
+                    name = it.name,
+                    imageUrl = it.imageUrl,
+                    unitPrice = it.unitPrice,
+                    quantity = it.quantity
+                )
+            }
+
+
+            val subTotal = items.sumOf { (it.unitPrice * it.quantity).toDouble() }.toFloat()
+            val shipping = if (items.isEmpty()) 0f else 40f
+            val total = subTotal + shipping
+
             val orderId = UUID.randomUUID().toString()
             val createdAt = System.currentTimeMillis()
-
-            val subTotal = current.active.price.subTotal
-            val shipping = current.active.price.shipping
-            val total = current.active.price.total
 
             val order = OrderEntity(
                 orderId = orderId,
                 userId = uid,
+
+                storeId = storeId,
+                storeName = storeName,
+
                 status = "PENDING",
                 createdAtMillis = createdAt,
                 itemsTotal = subTotal,
                 shipping = shipping,
                 grandTotal = total,
-
                 fullName = addr.fullName,
                 phone = addr.phone,
                 line1 = addr.line1,
@@ -171,7 +183,8 @@ class OrderViewModel(
                 pincode = addr.pincode
             )
 
-            val items = current.active.items.map {
+
+            val orderItems = items.map {
                 OrderItemEntity(
                     id = UUID.randomUUID().toString(),
                     userId = uid,
@@ -185,14 +198,41 @@ class OrderViewModel(
                 )
             }
 
-            orderRepo.insertOrderWithItems(order, items)
+            orderRepo.insertOrderWithItems(order, orderItems)
 
-            // clear cart after successful order save
-            cartRepo.clear(uid)
+            // Clear ONLY this store cart
+            cartRepo.clearStore(uid, storeId)
 
-            _state.value = _state.value.copy(message = "Order placed. Now we wait like champions.")
+            _state.value = _state.value.copy(message = "Order placed successfully.")
         }
     }
+
+
+    fun increaseQty(productId: String) {
+        val uid = userIdProvider().orEmpty()
+        if (uid.isBlank()) return
+
+        val item = _state.value.active.items.firstOrNull { it.productId == productId } ?: return
+
+        viewModelScope.launch {
+            cartRepo.setQty(uid, item.storeId, item.productId, item.quantity + 1)
+        }
+    }
+
+    fun decreaseQty(productId: String) {
+        val uid = userIdProvider().orEmpty()
+        if (uid.isBlank()) return
+
+        val item = _state.value.active.items.firstOrNull { it.productId == productId } ?: return
+
+        val newQty = (item.quantity - 1).coerceAtLeast(0)
+
+        viewModelScope.launch {
+            if (newQty <= 0) cartRepo.remove(uid, item.storeId, item.productId)
+            else cartRepo.setQty(uid, item.storeId, item.productId, newQty)
+        }
+    }
+
 
     fun clearMessage() {
         _state.value = _state.value.copy(message = null)

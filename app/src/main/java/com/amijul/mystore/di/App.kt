@@ -3,6 +3,7 @@ package com.amijul.mystore.di
 import android.app.Application
 import androidx.room.Room
 import com.amijul.mystore.data.auth.AuthRepositoryImpl
+import com.amijul.mystore.data.auth.FirebaseRoleRepository
 import com.amijul.mystore.data.local.address.AddressDao
 import com.amijul.mystore.data.local.address.AddressLocalRepositoryImpl
 import com.amijul.mystore.data.local.cart.CartLocalRepositoryImpl
@@ -13,6 +14,7 @@ import com.amijul.mystore.data.remote.ProductFirestoreDataSource
 import com.amijul.mystore.data.remote.StoreFirestoreDataSource
 import com.amijul.mystore.domain.address.AddressLocalRepository
 import com.amijul.mystore.domain.auth.AuthRepository
+import com.amijul.mystore.domain.auth.RoleRepository
 import com.amijul.mystore.domain.cart.CartLocalRepository
 import com.amijul.mystore.domain.order.OrderLocalRepository
 import com.amijul.mystore.domain.user.UserLocalRepository
@@ -26,6 +28,7 @@ import com.amijul.mystore.ui.order.OrderViewModel
 import com.amijul.mystore.ui.products.ProductListViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.functions.FirebaseFunctions
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import org.koin.core.module.dsl.viewModel
@@ -37,6 +40,7 @@ class App: Application() {
         super.onCreate()
         startKoin {
             androidContext(this@App)
+            printLogger()
             modules(appModule)
         }
     }
@@ -66,9 +70,12 @@ private val appModule = module {
     single<OrderLocalRepository> { OrderLocalRepositoryImpl(get()) }
 
     // Firestore singleton
+// Firebase singletons
     single { FirebaseFirestore.getInstance() }
     single { FirebaseAuth.getInstance() }
+    single { FirebaseFunctions.getInstance() }
     single<AuthRepository> { AuthRepositoryImpl(get()) }
+    single<RoleRepository>{ FirebaseRoleRepository(auth = get(), db = get(), functions = get()) }
 
     // Data sources
     single { StoreFirestoreDataSource(get()) }
@@ -86,10 +93,15 @@ private val appModule = module {
         )
     }
 
-    viewModel { CartViewModel(
-        userIdProvider = { get<FirebaseAuth>().currentUser?.uid },
-        cartRepo = get()
-    ) }
+    viewModel { (storeId: String, storeName: String) ->
+        CartViewModel(
+            userIdProvider = { get<FirebaseAuth>().currentUser?.uid },
+            storeIdProvider = { storeId },
+            storeNameProvider = { storeName },
+            cartRepo = get()
+        )
+    }
+
 
     viewModel {
         OrderViewModel(
@@ -99,7 +111,11 @@ private val appModule = module {
             orderRepo = get()
         )
     }
-    viewModel { AuthViewModel(get()) }
+
+
+
+
+    viewModel { AuthViewModel(get(), get()) }
 
     viewModel {
         AccountViewModel(

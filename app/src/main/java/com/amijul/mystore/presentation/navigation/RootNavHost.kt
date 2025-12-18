@@ -1,16 +1,10 @@
 package com.amijul.mystore.presentation.navigation
 
-import android.net.Uri
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -28,6 +22,7 @@ import com.amijul.mystore.ui.cart.CartScreen
 import com.amijul.mystore.ui.products.ProductListScreen
 import com.amijul.mystore.ui.products.ProductListViewModel
 import com.amijul.mystore.ui.products.productdetails.ProductDetailScreen
+import com.amijul.mystore.ui.seller.SellerUpgradeScreen
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -36,7 +31,6 @@ fun RootNavHost(
     authViewModel: AuthViewModel = koinViewModel()
 ) {
     val navController = rememberNavController()
-
 
     NavHost(
         navController = navController,
@@ -64,7 +58,6 @@ fun RootNavHost(
             }
 
             AuthGateLoading()
-
         }
 
         composable(Routes.SignIn.route) {
@@ -91,15 +84,14 @@ fun RootNavHost(
             )
         }
 
-
         // Main tabbed area (home / orders / account)
         composable(Routes.Main.route) {
             MyStoreApp(navController = navController)
         }
 
-        // Product page – full screen, no top/bottom from MyStoreApp
+        // Products
         composable(
-            route = "products/{storeId}/{storeName}",
+            route = Routes.Products.route,
             arguments = listOf(
                 navArgument("storeId") { type = NavType.StringType },
                 navArgument("storeName") { type = NavType.StringType }
@@ -116,26 +108,25 @@ fun RootNavHost(
                 viewModel = viewModel,
                 storeName = storeName,
                 onOpenProductDetail = {
-                    navController.navigate("productDetail/$storeId/${Uri.encode(storeName)}")
+                    navController.navigate(Routes.ProductDetail.createRoute(storeId, storeName))
                 }
             )
-
         }
 
+        // Product detail (shares ProductListViewModel using parent entry)
         composable(
-            route = "productDetail/{storeId}/{storeName}",
+            route = Routes.ProductDetail.route,
             arguments = listOf(
                 navArgument("storeId") { type = NavType.StringType },
                 navArgument("storeName") { type = NavType.StringType }
             )
-        )
-        { backStackEntry ->
+        ) { backStackEntry ->
 
             val storeId = backStackEntry.arguments?.getString("storeId") ?: return@composable
             val storeName = backStackEntry.arguments?.getString("storeName") ?: ""
 
             val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry("products/{storeId}/{storeName}")
+                navController.getBackStackEntry(Routes.Products.route)
             }
 
             val viewModel: ProductListViewModel = koinViewModel(
@@ -150,30 +141,60 @@ fun RootNavHost(
                     viewModel.clearSelectedProduct()
                     navController.popBackStack()
                 },
-
                 onProceedToCheckout = {
+                    navController.navigate(Routes.Checkout.createRoute(storeId, storeName))
                 },
                 onNavigation = {
-                    navController.navigate(Routes.Cart.route)
+                    navController.navigate(Routes.Cart.createRoute(storeId, storeName))
                 }
             )
         }
 
-        composable(Routes.Cart.route){
+        // Cart (NOW store scoped)
+        composable(
+            route = Routes.Cart.route,
+            arguments = listOf(
+                navArgument("storeId") { type = NavType.StringType },
+                navArgument("storeName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val storeId = backStackEntry.arguments?.getString("storeId") ?: return@composable
+            val storeName = backStackEntry.arguments?.getString("storeName") ?: ""
+
             CartScreen(
+                storeId = storeId,
+                storeName = storeName,
                 onBack = { navController.popBackStack() },
-                onProceedCheckout = {
-                    // next: navigate to checkout route (later)
-                }
+                onProceedCheckout = { navController.navigate(Routes.Checkout.createRoute(storeId, storeName)) }
+            )
+
+        }
+
+        composable(
+            route = Routes.Checkout.route,
+            arguments = listOf(
+                navArgument("storeId") { type = NavType.StringType },
+                navArgument("storeName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val storeId = backStackEntry.arguments?.getString("storeId") ?: return@composable
+            val storeName = backStackEntry.arguments?.getString("storeName") ?: ""
+
+            com.amijul.mystore.ui.checkout.CheckoutScreen(
+                storeId = storeId,
+                storeName = storeName,
+                onBack = { navController.popBackStack() }
             )
         }
 
 
+        // Account stack
         composable(Routes.MyDetails.route) {
             EditUserProfileScreen(
                 onBack = { navController.popBackStack() }
             )
         }
+
         composable(Routes.Addresses.route) { Text("Addresses") }
         composable(Routes.Help.route) { Text("Help") }
         composable(Routes.About.route) { Text("About") }
@@ -186,12 +207,11 @@ fun RootNavHost(
 
 
 
-
+        composable(Routes.SellerUpgrade.route) {
+            SellerUpgradeScreen(
+                onDone = { navController.popBackStack() }
+            )
+        }
 
     }
 }
-
-
-
-
-

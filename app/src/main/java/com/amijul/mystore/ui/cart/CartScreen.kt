@@ -6,14 +6,20 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.amijul.mystore.ui.cart.components.Carts
 import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun CartScreen(
-    cartViewModel: CartViewModel = koinViewModel(),
+    storeId: String,
+    storeName: String,
     onBack: () -> Unit,
     onProceedCheckout: () -> Unit
 ) {
-    LaunchedEffect(Unit) { cartViewModel.start() }
+    val cartViewModel: CartViewModel = koinViewModel(
+        parameters = { parametersOf(storeId, storeName) }
+    )
+
+    LaunchedEffect(storeId) { cartViewModel.start() }
 
     val state by cartViewModel.state.collectAsStateWithLifecycle()
 

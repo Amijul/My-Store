@@ -2,7 +2,6 @@ package com.amijul.mystore.data.order
 
 import com.google.firebase.Firebase
 import com.google.firebase.functions.functions
-import com.google.firebase.functions.getHttpsCallable
 import kotlinx.coroutines.tasks.await
 
 suspend fun placeOrderCallback(

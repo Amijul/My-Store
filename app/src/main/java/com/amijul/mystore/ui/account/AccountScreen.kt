@@ -17,11 +17,13 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Button
@@ -59,7 +61,9 @@ fun AccountScreen(
         AccountRowItem("Delivery Address", Icons.Filled.LocationOn) { onItemClick(AccountNavAction.DeliveryAddress) },
         AccountRowItem("Help", Icons.Filled.SupportAgent) { onItemClick(AccountNavAction.Help) },
         AccountRowItem("About", Icons.Filled.Info) { onItemClick(AccountNavAction.About) },
-    )
+        AccountRowItem("Upgrade to Seller", Icons.Filled.Sell) { onItemClick(AccountNavAction.SellerUpgrade) },
+
+        )
 
     Box(
         modifier = modifier
@@ -128,7 +132,7 @@ fun AccountScreen(
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
             ) {
-                Icon(Icons.Filled.Logout, contentDescription = null)
+                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
                 Spacer(Modifier.size(10.dp))
                 Text(
                     text = "Log Out",

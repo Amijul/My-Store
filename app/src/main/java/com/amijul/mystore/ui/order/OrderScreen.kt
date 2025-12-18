@@ -35,7 +35,6 @@ enum class OrdersTab { Active, Past }
 fun OrderScreen(
     modifier: Modifier = Modifier,
     orderViewModel: OrderViewModel = koinViewModel(),
-    cartViewModel: CartViewModel = koinViewModel()
 ) {
     val state by orderViewModel.state.collectAsStateWithLifecycle()
     var tab by remember { mutableStateOf(OrdersTab.Active) }
@@ -43,7 +42,6 @@ fun OrderScreen(
     LaunchedEffect(Unit) {
 
         orderViewModel.start()
-        cartViewModel.start()
     }
 
 
@@ -68,14 +66,13 @@ fun OrderScreen(
             when (tab) {
                 OrdersTab.Active -> ActiveBody(
                     state = state,
-                    onIncrease = { productId -> cartViewModel.increase(productId) },
-                    onDecrease = { productId ->
-                        val item = state.active.items.firstOrNull { it.productId == productId } ?: return@ActiveBody
-                        if (item.quantity <= 1) cartViewModel.remove(productId) else cartViewModel.decrease(productId)
-                    },
-                    onBuyNow = { orderViewModel.buyNow() },
+                    onIncrease = { productId -> orderViewModel.increaseQty(productId) },
+                    onDecrease = { productId -> orderViewModel.decreaseQty(productId) },
+                    onBuyNow = { //orderViewModel.buyNow()
+                               },
                     isLoading = state.isLoading
                 )
+
 
 
                 OrdersTab.Past -> PastBody(state = state)

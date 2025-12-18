@@ -21,7 +21,7 @@ import com.amijul.mystore.data.local.user.UserEntity
         OrderEntity::class,
         OrderItemEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 
 )

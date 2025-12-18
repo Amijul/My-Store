@@ -14,6 +14,9 @@ import kotlinx.coroutines.launch
 
 class CartViewModel(
     private val userIdProvider: () -> String?,
+    // NEW: current selected store (buyer flow depends on it)
+    private val storeIdProvider: () -> String?,
+    private val storeNameProvider: () -> String?,
     private val cartRepo: CartLocalRepository
 ) : ViewModel() {
 
@@ -22,13 +25,15 @@ class CartViewModel(
 
     fun start() {
         val uid = userIdProvider().orEmpty()
-        if (uid.isBlank()) {
+        val storeId = storeIdProvider().orEmpty()
+
+        if (uid.isBlank() || storeId.isBlank()) {
             _state.value = CartUiState(items = emptyList(), subTotal = 0f, shipping = 0f, total = 0f)
             return
         }
 
         viewModelScope.launch {
-            cartRepo.observeCart(uid)
+            cartRepo.observeCart(uid, storeId)
                 .map { entities ->
                     entities.map {
                         CartItemUi(
@@ -49,11 +54,16 @@ class CartViewModel(
 
     fun addToCart(item: CartItemUi, qty: Int) {
         val uid = userIdProvider().orEmpty()
-        if (uid.isBlank()) return
+        val storeId = storeIdProvider().orEmpty()
+        val storeName = storeNameProvider().orEmpty()
+
+        if (uid.isBlank() || storeId.isBlank()) return
 
         viewModelScope.launch {
             cartRepo.addOrIncrease(
                 userId = uid,
+                storeId = storeId,
+                storeName = storeName,
                 productId = item.id,
                 name = item.name,
                 imageUrl = item.imageUrl,
@@ -65,40 +75,46 @@ class CartViewModel(
 
     fun increase(productId: String) {
         val uid = userIdProvider().orEmpty()
-        if (uid.isBlank()) return
+        val storeId = storeIdProvider().orEmpty()
+        if (uid.isBlank() || storeId.isBlank()) return
+
         val current = _state.value.items.firstOrNull { it.id == productId } ?: return
 
         viewModelScope.launch {
-            cartRepo.setQty(uid, productId, current.quantity + 1)
+            cartRepo.setQty(uid, storeId, productId, current.quantity + 1)
         }
     }
 
     fun decrease(productId: String) {
         val uid = userIdProvider().orEmpty()
-        if (uid.isBlank()) return
+        val storeId = storeIdProvider().orEmpty()
+        if (uid.isBlank() || storeId.isBlank()) return
+
         val current = _state.value.items.firstOrNull { it.id == productId } ?: return
         val newQty = (current.quantity - 1).coerceAtLeast(1)
 
         viewModelScope.launch {
-            cartRepo.setQty(uid, productId, newQty)
+            cartRepo.setQty(uid, storeId, productId, newQty)
         }
     }
 
     fun remove(productId: String) {
         val uid = userIdProvider().orEmpty()
-        if (uid.isBlank()) return
+        val storeId = storeIdProvider().orEmpty()
+        if (uid.isBlank() || storeId.isBlank()) return
 
         viewModelScope.launch {
-            cartRepo.remove(uid, productId)
+            cartRepo.remove(uid, storeId, productId)
         }
     }
 
-    fun clearCart() {
+    fun clearCartForThisStore() {
         val uid = userIdProvider().orEmpty()
-        if (uid.isBlank()) return
+        val storeId = storeIdProvider().orEmpty()
+        if (uid.isBlank() || storeId.isBlank()) return
 
         viewModelScope.launch {
-            cartRepo.clear(uid)
+            cartRepo.clearStore(uid, storeId)
         }
     }
 

@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 class AuthRepositoryImpl(
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
 ) : AuthRepository{
     override suspend fun signIn(email: String, password: String) {
         auth.signInWithEmailAndPassword(email, password).await()

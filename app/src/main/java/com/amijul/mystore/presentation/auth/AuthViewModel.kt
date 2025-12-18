@@ -3,6 +3,7 @@ package com.amijul.mystore.presentation.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.amijul.mystore.domain.auth.AuthRepository
+import com.amijul.mystore.domain.auth.RoleRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -27,7 +28,8 @@ data class AuthUiState(
 )
 
 class AuthViewModel(
-    private val authRepo: AuthRepository
+    private val authRepo: AuthRepository,
+    private val roleRepo: RoleRepository
 ) : ViewModel() {
 
     private val _authState = MutableStateFlow(AuthUiState())
@@ -66,6 +68,7 @@ class AuthViewModel(
             _authState.value = _authState.value.copy(isLoading = true, error = null)
             try {
                 authRepo.signIn(email = email, password = pass) // ✅ awaited in repo
+                roleRepo.ensureBuyerRole()
                 _authState.value = _authState.value.copy(isLoading = false)
                 onSuccess()
             } catch (e: Exception) {
@@ -101,6 +104,7 @@ class AuthViewModel(
             _authState.value = _authState.value.copy(isLoading = true, error = null)
             try {
                 authRepo.signUp(email = email, password = pass) // ✅ awaited in repo
+                roleRepo.ensureBuyerRole()
                 _authState.value = _authState.value.copy(isLoading = false)
                 onSuccess()
             } catch (e: Exception) {
