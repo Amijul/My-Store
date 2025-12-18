@@ -10,6 +10,10 @@ function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+function asNumber(value: unknown): number {
+  return typeof value === "number" ? value : Number(value);
+}
+
 function requireAuth(context: functions.https.CallableContext): string {
   if (!context.auth) {
     throw new functions.https.HttpsError("unauthenticated", "Login required.");
@@ -52,14 +56,9 @@ export const onAuthUserCreate = functions.auth.user().onCreate(
 );
 
 /**
- * 2) Callable: set role right after signup (Buyer app -> buyer, Seller app -> seller).
- *
+ * 2) Callable: set role right after signup
  * Buyer app calls:  setRoleAfterSignup({ role: "buyer" })
  * Seller app calls: setRoleAfterSignup({ role: "seller" })
- *
- * Requires:
- * - Auth
- * - App Check
  */
 type SetRoleInput = { role: "buyer" | "seller" };
 
@@ -71,12 +70,15 @@ export const setRoleAfterSignup = functions.https.onCall(
     const uid = requireAuth(context);
     requireAppCheck(context);
 
-    const role = (data as any)?.role as SetRoleInput["role"];
+    // Use the type (prevents unused-type issues and keeps it strict)
+    const input = data as Partial<SetRoleInput>;
+    const role = input.role;
+
     if (role !== "buyer" && role !== "seller") {
       throw new functions.https.HttpsError("invalid-argument", "Invalid role.");
     }
 
-    // Write Firestore role (source of truth for UI)
+    // Firestore: source of truth for UI
     await admin.firestore().collection("users").doc(uid).set(
       {
         role,
@@ -85,7 +87,7 @@ export const setRoleAfterSignup = functions.https.onCall(
       { merge: true }
     );
 
-    // Set custom claims (useful for Security Rules and server-side checks)
+    // Custom claims: for security rules + backend checks
     await admin.auth().setCustomUserClaims(uid, { role });
 
     return { ok: true, role };
@@ -93,10 +95,8 @@ export const setRoleAfterSignup = functions.https.onCall(
 );
 
 /**
- * 3) OPTIONAL: Invite-code upgrade to seller (use only if you want seller access control).
- *
- * If you plan "separate seller app = always seller", you may NOT need this.
- * Keep it only if you want to restrict seller creation using codes.
+ * 3) OPTIONAL: Invite-code upgrade to seller
+ * Use only if you want seller access control (invite codes).
  */
 type UpgradeToSellerInput = { inviteCode: string };
 
@@ -108,9 +108,15 @@ export const upgradeToSeller = functions.https.onCall(
     const uid = requireAuth(context);
     requireAppCheck(context);
 
-    const inviteCode = asString((data as any)?.inviteCode).trim();
+    // Use the type (fixes TS6196)
+    const input = data as Partial<UpgradeToSellerInput>;
+    const inviteCode = asString(input.inviteCode).trim();
+
     if (!inviteCode) {
-      throw new functions.https.HttpsError("invalid-argument", "inviteCode is required.");
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "inviteCode is required."
+      );
     }
 
     const inviteRef = admin.firestore().collection("seller_invites").doc(inviteCode);
@@ -125,14 +131,20 @@ export const upgradeToSeller = functions.https.onCall(
       const invite = inviteSnap.data() as any;
 
       if (invite.active !== true) {
-        throw new functions.https.HttpsError("failed-precondition", "Invite code is not active.");
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Invite code is not active."
+        );
       }
 
       const maxUses = typeof invite.maxUses === "number" ? invite.maxUses : 1;
       const usedCount = typeof invite.usedCount === "number" ? invite.usedCount : 0;
 
       if (usedCount >= maxUses) {
-        throw new functions.https.HttpsError("resource-exhausted", "Invite code already used.");
+        throw new functions.https.HttpsError(
+          "resource-exhausted",
+          "Invite code already used."
+        );
       }
 
       // Optional expiry check
@@ -177,10 +189,96 @@ export const upgradeToSeller = functions.https.onCall(
 );
 
 /**
- * 4) Your createOrder: leave as-is for now (but next step should be storeId-based).
- * NOTE: This function is OK for MVP, but later we should change sellerId -> storeId
- * and write orders under /stores/{storeId}/orders/{orderId}
+ * 4) createOrder (MVP)
+ * NOTE: next improvement: storeId-based order path, and server-side price verification.
  */
+type CreateOrderItemInput = {
+  productId: string;
+  qty: number;
+  unitPrice: number;
+};
 
-// Keep your existing createOrder code below if you want unchanged.
-// (I did not rewrite it here because you said "need only and clean easy to understand".)
+type CreateOrderInput = {
+  sellerId: string; // for now; later move to storeId
+  items: CreateOrderItemInput[];
+};
+
+function isItemInput(value: unknown): value is CreateOrderItemInput {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.productId === "string" &&
+    typeof v.qty !== "undefined" &&
+    typeof v.unitPrice !== "undefined"
+  );
+}
+
+export const createOrder = functions.https.onCall(
+  async (
+    data: unknown,
+    context: functions.https.CallableContext
+  ): Promise<{ ok: boolean; orderId: string }> => {
+    const buyerId = requireAuth(context);
+    requireAppCheck(context);
+
+    const input = data as Partial<CreateOrderInput>;
+    const sellerId = asString(input.sellerId).trim();
+    const rawItems = input.items;
+
+    if (!sellerId) {
+      throw new functions.https.HttpsError("invalid-argument", "sellerId is required.");
+    }
+    if (!Array.isArray(rawItems) || rawItems.length === 0) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "items must be a non-empty array."
+      );
+    }
+
+    let totalAmount = 0;
+
+    const normalizedItems = rawItems.map((raw) => {
+      if (!isItemInput(raw)) {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "Each item must have productId, qty, unitPrice."
+        );
+      }
+
+      const productId = raw.productId.trim();
+      const qty = asNumber(raw.qty);
+      const unitPrice = asNumber(raw.unitPrice);
+
+      if (!productId) {
+        throw new functions.https.HttpsError("invalid-argument", "productId is required.");
+      }
+      if (!Number.isFinite(qty) || qty <= 0) {
+        throw new functions.https.HttpsError("invalid-argument", "qty must be > 0.");
+      }
+      if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+        throw new functions.https.HttpsError("invalid-argument", "unitPrice must be >= 0.");
+      }
+
+      const lineTotal = qty * unitPrice;
+      totalAmount += lineTotal;
+
+      return { productId, qty, unitPrice, lineTotal };
+    });
+
+    const orderRef = admin.firestore().collection("orders").doc();
+    const now = admin.firestore.FieldValue.serverTimestamp();
+
+    await orderRef.set({
+      id: orderRef.id,
+      buyerId,
+      sellerId,
+      status: "PLACED",
+      items: normalizedItems,
+      totalAmount,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { ok: true, orderId: orderRef.id };
+  }
+);
