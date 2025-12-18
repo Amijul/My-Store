@@ -149,7 +149,6 @@ type UpgradeToSellerInput = {inviteCode: string};
  *
  * @param {unknown} data Callable request payload.
  * @param {functions.https.CallableContext} context Callable context.
- * @return {Promise<{ok:boolean,role:"seller",storeId?:string,storeName?:string}>}
  * Result.
  */
 export const upgradeToSeller = functions.https.onCall(
