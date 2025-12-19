@@ -412,7 +412,9 @@ export const upsertProduct = functions.https.onCall(
       .doc(storeId)
       .collection("products");
 
-    const productRef = productId ? productsCol.doc(productId) : productsCol.doc();
+    const productRef = productId ? productsCol
+    .doc(productId) : productsCol.doc();
+
     const now = admin.firestore.FieldValue.serverTimestamp();
 
     const unit = asString(input.unit).trim();
