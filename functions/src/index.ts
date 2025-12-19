@@ -142,7 +142,8 @@ export const createStoreForSeller = functions.https.onCall(
     const type = input.type;
 
     if (!name) {
-      throw new functions.https.HttpsError("invalid-argument", "name is required.");
+      throw new functions.https
+      .HttpsError("invalid-argument", "name is required.");
     }
 
     const allowed =
@@ -153,7 +154,8 @@ export const createStoreForSeller = functions.https.onCall(
       type === "other";
 
     if (!allowed) {
-      throw new functions.https.HttpsError("invalid-argument", "Invalid store type.");
+      throw new functions.https
+      .HttpsError("invalid-argument", "Invalid store type.");
     }
 
     const storeRef = admin.firestore().collection("stores").doc();
@@ -267,7 +269,8 @@ export const upsertProduct = functions.https.onCall(
     const category = input.category;
 
     if (!name) {
-      throw new functions.https.HttpsError("invalid-argument", "name is required.");
+      throw new functions.https
+      .HttpsError("invalid-argument", "name is required.");
     }
 
     const allowedCategory =
@@ -278,19 +281,22 @@ export const upsertProduct = functions.https.onCall(
       category === "other";
 
     if (!allowedCategory) {
-      throw new functions.https.HttpsError("invalid-argument", "Invalid category.");
+      throw new functions.https
+      .HttpsError("invalid-argument", "Invalid category.");
     }
 
     const price = asNumber(input.price);
     if (!Number.isFinite(price) || price < 0) {
-      throw new functions.https.HttpsError("invalid-argument", "Invalid price.");
+      throw new functions.https
+      .HttpsError("invalid-argument", "Invalid price.");
     }
 
     const productId = asString(input.productId).trim();
     const productsCol = admin.firestore().collection("stores").doc(storeId)
       .collection("products");
 
-    const productRef = productId ? productsCol.doc(productId) : productsCol.doc();
+    const productRef = productId ? productsCol
+    .doc(productId) : productsCol.doc();
     const now = admin.firestore.FieldValue.serverTimestamp();
 
     const doc: Record<string, unknown> = {
@@ -394,10 +400,12 @@ export const createOrder = functions.https.onCall(
     const rawItems = input.items;
 
     if (!storeId) {
-      throw new functions.https.HttpsError("invalid-argument", "storeId is required.");
+      throw new functions.https
+      .HttpsError("invalid-argument", "storeId is required.");
     }
     if (!Array.isArray(rawItems) || rawItems.length === 0) {
-      throw new functions.https.HttpsError("invalid-argument", "items must be non-empty.");
+      throw new functions.https
+      .HttpsError("invalid-argument", "items must be non-empty.");
     }
 
     // load store once
@@ -417,26 +425,31 @@ export const createOrder = functions.https.onCall(
       const qty = asNumber((raw as any)?.qty);
 
       if (!productId) {
-        throw new functions.https.HttpsError("invalid-argument", "productId is required.");
+        throw new functions.https
+        .HttpsError("invalid-argument", "productId is required.");
       }
       if (!Number.isFinite(qty) || qty <= 0) {
-        throw new functions.https.HttpsError("invalid-argument", "qty must be > 0.");
+        throw new functions.https
+        .HttpsError("invalid-argument", "qty must be > 0.");
       }
 
       const productRef = storeRef.collection("products").doc(productId);
       const productSnap = await productRef.get();
       if (!productSnap.exists) {
-        throw new functions.https.HttpsError("not-found", `Product not found: ${productId}`);
+        throw new functions.https
+        .HttpsError("not-found", `Product not found: ${productId}`);
       }
 
       const inStock = productSnap.get("inStock");
       if (inStock === false) {
-        throw new functions.https.HttpsError("failed-precondition", "Product out of stock.");
+        throw new functions.https
+        .HttpsError("failed-precondition", "Product out of stock.");
       }
 
       const unitPrice = Number(productSnap.get("price") ?? 0);
       if (!Number.isFinite(unitPrice) || unitPrice < 0) {
-        throw new functions.https.HttpsError("failed-precondition", "Invalid product price.");
+        throw new functions.https
+        .HttpsError("failed-precondition", "Invalid product price.");
       }
 
       const name = (productSnap.get("name") as string) || "";
