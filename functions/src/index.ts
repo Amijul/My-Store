@@ -47,7 +47,8 @@ function requireAuth(
  * @param {functions.https.CallableContext} context Callable context.
  * @return {void}
  */
-function requireAppCheck(
+
+ /** function requireAppCheck(
   context: functions.https.CallableContext
 ): void {
   if (!context.app) {
@@ -57,6 +58,8 @@ function requireAppCheck(
     );
   }
 }
+
+*/
 
 /**
  * 1) Auth trigger: create base Firestore user profile on signup.
