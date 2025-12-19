@@ -368,14 +368,14 @@ type CreateOrderInput = {
  * @param {unknown} value Any value.
  * @return {boolean} True if CreateOrderItemInput.
  */
-function isOrderItem(value: unknown): value is CreateOrderItemInput {
+/**  function isOrderItem(value: unknown): value is CreateOrderItemInput {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
   return (
     typeof v.productId === "string" &&
     typeof v.qty !== "undefined"
   );
-}
+} */
 
 /**
  * @param {unknown} data Callable payload.
