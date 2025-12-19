@@ -105,6 +105,7 @@ fun RootNavHost(
             )
 
             ProductListScreen(
+                storeId = storeId,
                 viewModel = viewModel,
                 storeName = storeName,
                 onOpenProductDetail = {
@@ -135,6 +136,7 @@ fun RootNavHost(
             )
 
             ProductDetailScreen(
+                storeId = storeId,
                 viewModel = viewModel,
                 storeName = storeName,
                 onBack = {

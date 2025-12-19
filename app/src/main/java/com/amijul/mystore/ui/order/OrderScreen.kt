@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.amijul.mystore.ui.cart.CartViewModel
 import com.amijul.mystore.ui.order.component.ActiveBody
 import com.amijul.mystore.ui.order.component.PastBody
 import com.amijul.mystore.ui.order.component.TabBtn

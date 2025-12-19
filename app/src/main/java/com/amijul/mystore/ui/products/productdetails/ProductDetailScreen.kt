@@ -31,17 +31,22 @@ import com.amijul.mystore.ui.products.productdetails.components.RatingStars
 import com.amijul.mystore.ui.products.productdetails.components.StockPill
 import com.amijul.mystore.ui.products.productdetails.components.SwipeProceedButton
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailScreen(
+    storeId: String,
     storeName: String,
     viewModel: ProductListViewModel,
-    cartViewModel: CartViewModel = koinViewModel(),
     onBack: () -> Unit,
     onProceedToCheckout: () -> Unit,
     onNavigation: () -> Unit,
 ) {
+    val cartViewModel: CartViewModel = koinViewModel(
+        parameters = { parametersOf(storeId, storeName) }
+    )
+
     LaunchedEffect(Unit) {
         cartViewModel.start()
     }

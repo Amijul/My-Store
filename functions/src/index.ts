@@ -27,7 +27,10 @@ function asNumber(value: unknown): number {
  */
 function requireAuth(context: functions.https.CallableContext): string {
   if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Login required.");
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "Login required."
+    );
   }
   return context.auth.uid;
 }
@@ -46,6 +49,7 @@ export const onAuthUserCreate = functions.auth.user().onCreate(
         status: "active",
         email: user.email ?? null,
         storeId: null,
+        storeName: null,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
@@ -75,7 +79,10 @@ export const setRoleAfterSignup = functions.https.onCall(
     const role = input.role;
 
     if (role !== "buyer" && role !== "seller") {
-      throw new functions.https.HttpsError("invalid-argument", "Invalid role.");
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Invalid role."
+      );
     }
 
     await admin.firestore().collection("users").doc(uid).set(
@@ -89,6 +96,124 @@ export const setRoleAfterSignup = functions.https.onCall(
     await admin.auth().setCustomUserClaims(uid, {role: role});
 
     return {ok: true, role: role};
+  }
+);
+
+/**
+ * Store update input (seller updates own store profile).
+ */
+type UpdateMyStoreInput = {
+  name: string;
+  phone?: string;
+  type: "grocery" | "sweets" | "clothes" | "pharmacy" | "other";
+  isActive: boolean;
+  address?: {
+    line1?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  };
+};
+
+/**
+ * Update seller's own store profile (owner-only).
+ *
+ * @param {unknown} data Callable payload.
+ * @param {functions.https.CallableContext} context Callable context.
+ * @return {Promise<{ok:boolean}>} Result.
+ */
+export const updateMyStoreProfile = functions.https.onCall(
+  async (
+    data: unknown,
+    context: functions.https.CallableContext
+  ): Promise<{ok: boolean}> => {
+    const uid = requireAuth(context);
+
+    const userRef = admin.firestore().collection("users").doc(uid);
+    const userSnap = await userRef.get();
+    const role = asString(userSnap.get("role"));
+    const storeId = asString(userSnap.get("storeId"));
+
+    if (role !== "seller" || !storeId) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Seller store not found."
+      );
+    }
+
+    const input = data as Partial<UpdateMyStoreInput>;
+    const name = asString(input.name).trim();
+    const phone = asString(input.phone).trim();
+    const type = input.type;
+    const isActive = input.isActive === true;
+
+    if (!name) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "name is required."
+      );
+    }
+
+    const allowed =
+      type === "grocery" ||
+      type === "sweets" ||
+      type === "clothes" ||
+      type === "pharmacy" ||
+      type === "other";
+
+    if (!allowed) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Invalid store type."
+      );
+    }
+
+    const storeRef = admin.firestore().collection("stores").doc(storeId);
+    const storeSnap = await storeRef.get();
+
+    if (!storeSnap.exists) {
+      throw new functions.https.HttpsError(
+        "not-found",
+        "Store does not exist."
+      );
+    }
+
+    const ownerUid = asString(storeSnap.get("ownerUid"));
+    if (ownerUid !== uid) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Not store owner."
+      );
+    }
+
+    const now = admin.firestore.FieldValue.serverTimestamp();
+
+    await storeRef.set(
+      {
+        name: name,
+        type: type,
+        phone: phone || null,
+        isActive: isActive,
+        address: {
+          line1: asString(input.address?.line1).trim() || null,
+          city: asString(input.address?.city).trim() || null,
+          state: asString(input.address?.state).trim() || null,
+          pincode: asString(input.address?.pincode).trim() || null,
+        },
+        updatedAt: now,
+      },
+      {merge: true}
+    );
+
+    await userRef.set(
+      {
+        storeName: name,
+        updatedAt: now,
+      },
+      {merge: true}
+    );
+
+    return {ok: true};
   }
 );
 
@@ -119,7 +244,6 @@ export const createStoreForSeller = functions.https.onCall(
   ): Promise<{ok: boolean; storeId: string}> => {
     const uid = requireAuth(context);
 
-    // Ensure seller
     const userRef = admin.firestore().collection("users").doc(uid);
     const userSnap = await userRef.get();
     const role = asString(userSnap.get("role"));
@@ -131,7 +255,6 @@ export const createStoreForSeller = functions.https.onCall(
       );
     }
 
-    // If store already exists for this seller, return it (idempotent).
     const existingStoreId = asString(userSnap.get("storeId"));
     if (existingStoreId) {
       return {ok: true, storeId: existingStoreId};
@@ -142,8 +265,10 @@ export const createStoreForSeller = functions.https.onCall(
     const type = input.type;
 
     if (!name) {
-      throw new functions.https
-      .HttpsError("invalid-argument", "name is required.");
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "name is required."
+      );
     }
 
     const allowed =
@@ -154,8 +279,10 @@ export const createStoreForSeller = functions.https.onCall(
       type === "other";
 
     if (!allowed) {
-      throw new functions.https
-      .HttpsError("invalid-argument", "Invalid store type.");
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Invalid store type."
+      );
     }
 
     const storeRef = admin.firestore().collection("stores").doc();
@@ -183,6 +310,7 @@ export const createStoreForSeller = functions.https.onCall(
         userRef,
         {
           storeId: storeRef.id,
+          storeName: name,
           updatedAt: now,
         },
         {merge: true}
@@ -195,48 +323,29 @@ export const createStoreForSeller = functions.https.onCall(
 
 /**
  * 4) Upsert product (seller only, within own store).
+ *
+ * MVP decision:
+ * - unit is a simple string ("pcs", "kg", "g", "l", "ml", "pack").
  */
-type ProductUnit = {
-  type: "kg" | "g" | "l" | "ml" | "pcs" | "pack";
-  value: number;
-};
-
-type VariantInput = {
-  id: string;
-  title: string;
-  price: number;
-  inStock?: boolean;
-  stockQty?: number;
-  unit?: ProductUnit;
-  attributes?: Record<string, unknown>;
-  images?: string[];
-};
-
 type UpsertProductInput = {
-  productId?: string; // optional for create; send for update
+  productId?: string;
   category: "grocery" | "sweets" | "clothes" | "pharmacy" | "other";
   subCategory?: string;
 
   name: string;
   description?: string;
-  images?: string[];
+
   thumbnail?: string;
+  imageUrl?: string;
 
   currency?: "INR";
   price: number;
-  mrp?: number;
-  gstPercent?: number;
 
   inStock?: boolean;
   stockQty?: number;
-  lowStockThreshold?: number;
 
-  unit?: ProductUnit;
+  unit?: string;
 
-  tags?: string[];
-  attributes?: Record<string, unknown>;
-
-  variants?: VariantInput[];
   isActive?: boolean;
 };
 
@@ -269,8 +378,10 @@ export const upsertProduct = functions.https.onCall(
     const category = input.category;
 
     if (!name) {
-      throw new functions.https
-      .HttpsError("invalid-argument", "name is required.");
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "name is required."
+      );
     }
 
     const allowedCategory =
@@ -281,23 +392,32 @@ export const upsertProduct = functions.https.onCall(
       category === "other";
 
     if (!allowedCategory) {
-      throw new functions.https
-      .HttpsError("invalid-argument", "Invalid category.");
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Invalid category."
+      );
     }
 
     const price = asNumber(input.price);
     if (!Number.isFinite(price) || price < 0) {
-      throw new functions.https
-      .HttpsError("invalid-argument", "Invalid price.");
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Invalid price."
+      );
     }
 
     const productId = asString(input.productId).trim();
-    const productsCol = admin.firestore().collection("stores").doc(storeId)
+    const productsCol = admin.firestore()
+      .collection("stores")
+      .doc(storeId)
       .collection("products");
 
-    const productRef = productId ? productsCol
-    .doc(productId) : productsCol.doc();
+    const productRef = productId ? productsCol.doc(productId) : productsCol.doc();
     const now = admin.firestore.FieldValue.serverTimestamp();
+
+    const unit = asString(input.unit).trim();
+    const thumb = asString(input.thumbnail).trim();
+    const imageUrl = asString(input.imageUrl).trim();
 
     const doc: Record<string, unknown> = {
       productId: productRef.id,
@@ -306,47 +426,26 @@ export const upsertProduct = functions.https.onCall(
       subCategory: asString(input.subCategory).trim() || null,
 
       name: name,
-      description: asString(input.description) || null,
-      images: Array.isArray(input.images) ? input.images : [],
-      thumbnail: asString(input.thumbnail) || null,
+      description: asString(input.description).trim() || null,
+
+      thumbnail: (thumb || imageUrl) || null,
+      imageUrl: (thumb || imageUrl) || null,
 
       currency: input.currency || "INR",
       price: price,
-      mrp: Number.isFinite(asNumber(input.mrp)) ? asNumber(input.mrp) : null,
-      gstPercent: Number.isFinite(asNumber(input.gstPercent))
-        ? asNumber(input.gstPercent)
-        : null,
 
       inStock: typeof input.inStock === "boolean" ? input.inStock : true,
       stockQty: Number.isFinite(asNumber(input.stockQty))
         ? asNumber(input.stockQty)
         : null,
-      lowStockThreshold: Number.isFinite(asNumber(input.lowStockThreshold))
-        ? asNumber(input.lowStockThreshold)
-        : null,
 
-      unit: input.unit && Number.isFinite(asNumber(input.unit.value))
-        ? {
-            type: input.unit.type,
-            value: asNumber(input.unit.value),
-          }
-        : null,
-
-      tags: Array.isArray(input.tags) ? input.tags : [],
-      attributes: input.attributes && typeof input.attributes === "object"
-        ? input.attributes
-        : {},
-
-      hasVariants: Array.isArray(input.variants) && input.variants.length > 0,
-      variants: Array.isArray(input.variants) ? input.variants : [],
+      unit: unit || null,
 
       isActive: typeof input.isActive === "boolean" ? input.isActive : true,
       updatedAt: now,
     };
 
-    // Set createdAt only if creating new doc
-    const existing = await productRef.get();
-    if (!existing.exists) {
+    if (!productId) {
       doc.createdAt = now;
     }
 
@@ -371,19 +470,6 @@ type CreateOrderInput = {
 };
 
 /**
- * @param {unknown} value Any value.
- * @return {boolean} True if CreateOrderItemInput.
- */
-/**  function isOrderItem(value: unknown): value is CreateOrderItemInput {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.productId === "string" &&
-    typeof v.qty !== "undefined"
-  );
-} */
-
-/**
  * @param {unknown} data Callable payload.
  * @param {functions.https.CallableContext} context Callable context.
  * @return {Promise<{ok:boolean,orderId:string}>} Result.
@@ -400,75 +486,101 @@ export const createOrder = functions.https.onCall(
     const rawItems = input.items;
 
     if (!storeId) {
-      throw new functions.https
-      .HttpsError("invalid-argument", "storeId is required.");
-    }
-    if (!Array.isArray(rawItems) || rawItems.length === 0) {
-      throw new functions.https
-      .HttpsError("invalid-argument", "items must be non-empty.");
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "storeId is required."
+      );
     }
 
-    // load store once
+    if (!Array.isArray(rawItems) || rawItems.length === 0) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "items must be non-empty."
+      );
+    }
+
     const storeRef = admin.firestore().collection("stores").doc(storeId);
     const storeSnap = await storeRef.get();
-    if (!storeSnap.exists) {
-      throw new functions.https
-      .HttpsError("not-found", "Store not found.");
-    }
-    const storeName = (storeSnap.get("name") as string) || "";
 
-    // resolve each product price from Firestore
+    if (!storeSnap.exists) {
+      throw new functions.https.HttpsError(
+        "not-found",
+        "Store not found."
+      );
+    }
+
+    const storeName = asString(storeSnap.get("name"));
+
     let itemsTotal = 0;
-    const normalizedItems = [];
+    const normalizedItems: Array<Record<string, unknown>> = [];
 
     for (const raw of rawItems) {
-      const productId = asString((raw as any)?.productId).trim();
-      const qty = asNumber((raw as any)?.qty);
+      const productId = asString((raw as Record<string, unknown>)?.productId)
+        .trim();
+      const qty = asNumber((raw as Record<string, unknown>)?.qty);
 
       if (!productId) {
-        throw new functions.https
-        .HttpsError("invalid-argument", "productId is required.");
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "productId is required."
+        );
       }
+
       if (!Number.isFinite(qty) || qty <= 0) {
-        throw new functions.https
-        .HttpsError("invalid-argument", "qty must be > 0.");
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "qty must be > 0."
+        );
       }
 
       const productRef = storeRef.collection("products").doc(productId);
       const productSnap = await productRef.get();
+
       if (!productSnap.exists) {
-        throw new functions.https
-        .HttpsError("not-found", `Product not found: ${productId}`);
+        throw new functions.https.HttpsError(
+          "not-found",
+          "Product not found."
+        );
+      }
+
+      const pStoreId = asString(productSnap.get("storeId"));
+      if (pStoreId && pStoreId !== storeId) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Product-store mismatch."
+        );
       }
 
       const inStock = productSnap.get("inStock");
       if (inStock === false) {
-        throw new functions.https
-        .HttpsError("failed-precondition", "Product out of stock.");
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Product out of stock."
+        );
       }
 
       const unitPrice = Number(productSnap.get("price") ?? 0);
       if (!Number.isFinite(unitPrice) || unitPrice < 0) {
-        throw new functions.https
-        .HttpsError("failed-precondition", "Invalid product price.");
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Invalid product price."
+        );
       }
 
-      const name = (productSnap.get("name") as string) || "";
-      const imageUrl =
-        (productSnap.get("thumbnail") as string) ||
-        (productSnap.get("imageUrl") as string) ||
-        "";
+      const name = asString(productSnap.get("name"));
+      const imageUrl = asString(productSnap.get("thumbnail")) ||
+        asString(productSnap.get("imageUrl"));
 
       const lineTotal = unitPrice * qty;
       itemsTotal += lineTotal;
 
       normalizedItems.push({
-        productId,
-        name,
-        imageUrl,
-        qty,
-        unitPrice,
-        lineTotal,
+        productId: productId,
+        name: name,
+        imageUrl: imageUrl,
+        qty: qty,
+        unitPrice: unitPrice,
+        lineTotal: lineTotal,
       });
     }
 
@@ -480,14 +592,14 @@ export const createOrder = functions.https.onCall(
 
     await orderRef.set({
       id: orderRef.id,
-      buyerId,
-      storeId,
-      storeName,
+      buyerId: buyerId,
+      storeId: storeId,
+      storeName: storeName,
       status: "PLACED",
       items: normalizedItems,
-      itemsTotal,
-      shipping,
-      grandTotal,
+      itemsTotal: itemsTotal,
+      shipping: shipping,
+      grandTotal: grandTotal,
       createdAt: now,
       updatedAt: now,
     });
@@ -495,4 +607,3 @@ export const createOrder = functions.https.onCall(
     return {ok: true, orderId: orderRef.id};
   }
 );
-

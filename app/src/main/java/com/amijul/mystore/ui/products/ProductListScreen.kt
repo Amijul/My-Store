@@ -37,14 +37,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.amijul.mystore.ui.cart.CartViewModel
 import com.amijul.mystore.ui.products.component.ProductGrid
 import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun ProductListScreen(
+    storeId: String,
     viewModel: ProductListViewModel,
-    cartViewModel: CartViewModel = koinViewModel(),
     storeName: String,
     onOpenProductDetail: () -> Unit
 ) {
+
+    val cartViewModel: CartViewModel = koinViewModel(
+        parameters = { parametersOf(storeId, storeName) }
+    )
+
     LaunchedEffect(Unit) {
         cartViewModel.start()
     }

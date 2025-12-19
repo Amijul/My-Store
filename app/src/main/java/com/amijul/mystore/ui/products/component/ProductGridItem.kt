@@ -35,9 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.amijul.mystore.domain.cart.CartItemUi
 import com.amijul.mystore.domain.product.ProductUiModel
-import com.amijul.mystore.ui.cart.CartViewModel
 import androidx.compose.foundation.clickable
 
 
