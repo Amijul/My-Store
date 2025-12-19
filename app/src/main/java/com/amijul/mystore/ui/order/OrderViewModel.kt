@@ -7,6 +7,7 @@ import com.amijul.mystore.data.local.order.OrderEntity
 import com.amijul.mystore.data.local.order.OrderItemEntity
 import com.amijul.mystore.domain.cart.CartLocalRepository
 import com.amijul.mystore.domain.order.OrderLocalRepository
+import com.amijul.mystore.domain.order.OrderRemoteRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,7 +63,8 @@ class OrderViewModel(
     private val userIdProvider: () -> String?,
     private val addressDao: AddressDao,
     private val cartRepo: CartLocalRepository,
-    private val orderRepo: OrderLocalRepository
+    private val orderRepo: OrderLocalRepository,
+    private val orderRemoteRepo: OrderRemoteRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(OrderUiState())
@@ -131,81 +133,29 @@ class OrderViewModel(
         }
 
         viewModelScope.launch {
-            val addr = addressDao.getDefault(uid) ?: run {
-                _state.value = _state.value.copy(message = "No default address found.")
-                return@launch
-            }
-
-            // NEW: one-shot cart snapshot
             val cart = cartRepo.getCartOnce(uid, storeId)
             if (cart.isEmpty()) {
                 _state.value = _state.value.copy(message = "Cart is empty.")
                 return@launch
             }
 
-            val items = cart.map {
-                OrderItemUi(
-                    storeId = it.storeId,
-                    productId = it.productId,
-                    name = it.name,
-                    imageUrl = it.imageUrl,
-                    unitPrice = it.unitPrice,
-                    quantity = it.quantity
+            try {
+                // Remote order create
+                val orderId = orderRemoteRepo.createOrder(
+                    storeId = storeId,
+                    items = cart.map { it.productId to it.quantity }
                 )
+
+                // Clear local cart for that store
+                cartRepo.clearStore(uid, storeId)
+
+                _state.value = _state.value.copy(message = "Order placed. OrderId: $orderId")
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(message = e.message ?: "Order failed")
             }
-
-
-            val subTotal = items.sumOf { (it.unitPrice * it.quantity).toDouble() }.toFloat()
-            val shipping = if (items.isEmpty()) 0f else 40f
-            val total = subTotal + shipping
-
-            val orderId = UUID.randomUUID().toString()
-            val createdAt = System.currentTimeMillis()
-
-            val order = OrderEntity(
-                orderId = orderId,
-                userId = uid,
-
-                storeId = storeId,
-                storeName = storeName,
-
-                status = "PENDING",
-                createdAtMillis = createdAt,
-                itemsTotal = subTotal,
-                shipping = shipping,
-                grandTotal = total,
-                fullName = addr.fullName,
-                phone = addr.phone,
-                line1 = addr.line1,
-                line2 = addr.line2,
-                city = addr.city,
-                state = addr.state,
-                pincode = addr.pincode
-            )
-
-
-            val orderItems = items.map {
-                OrderItemEntity(
-                    id = UUID.randomUUID().toString(),
-                    userId = uid,
-                    orderId = orderId,
-                    productId = it.productId,
-                    name = it.name,
-                    imageUrl = it.imageUrl,
-                    unitPrice = it.unitPrice,
-                    quantity = it.quantity,
-                    lineTotal = it.lineTotal
-                )
-            }
-
-            orderRepo.insertOrderWithItems(order, orderItems)
-
-            // Clear ONLY this store cart
-            cartRepo.clearStore(uid, storeId)
-
-            _state.value = _state.value.copy(message = "Order placed successfully.")
         }
     }
+
 
 
     fun increaseQty(productId: String) {

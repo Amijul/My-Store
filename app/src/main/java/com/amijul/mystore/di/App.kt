@@ -10,6 +10,7 @@ import com.amijul.mystore.data.local.cart.CartLocalRepositoryImpl
 import com.amijul.mystore.data.local.db.LocalDatabase
 import com.amijul.mystore.data.local.order.OrderLocalRepositoryImpl
 import com.amijul.mystore.data.local.user.UserLocalRepositoryImpl
+import com.amijul.mystore.data.remote.OrderFunctionsRepository
 import com.amijul.mystore.data.remote.ProductFirestoreDataSource
 import com.amijul.mystore.data.remote.StoreFirestoreDataSource
 import com.amijul.mystore.domain.address.AddressLocalRepository
@@ -17,6 +18,7 @@ import com.amijul.mystore.domain.auth.AuthRepository
 import com.amijul.mystore.domain.auth.RoleRepository
 import com.amijul.mystore.domain.cart.CartLocalRepository
 import com.amijul.mystore.domain.order.OrderLocalRepository
+import com.amijul.mystore.domain.order.OrderRemoteRepository
 import com.amijul.mystore.domain.user.UserLocalRepository
 import com.amijul.mystore.presentation.auth.AuthViewModel
 import com.amijul.mystore.ui.account.AccountViewModel
@@ -76,7 +78,7 @@ private val appModule = module {
     single { FirebaseFunctions.getInstance() }
     single<AuthRepository> { AuthRepositoryImpl(get()) }
     single<RoleRepository>{ FirebaseRoleRepository(auth = get(), db = get(), functions = get()) }
-
+    single<OrderRemoteRepository>{ OrderFunctionsRepository(get()) }
     // Data sources
     single { StoreFirestoreDataSource(get()) }
     single { ProductFirestoreDataSource(get()) }
@@ -108,7 +110,8 @@ private val appModule = module {
             userIdProvider = { get<FirebaseAuth>().currentUser?.uid },
             addressDao = get(),
             cartRepo = get(),
-            orderRepo = get()
+            orderRepo = get(),
+            orderRemoteRepo = get()
         )
     }
 
