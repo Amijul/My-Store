@@ -412,7 +412,8 @@ export const createOrder = functions.https.onCall(
     const storeRef = admin.firestore().collection("stores").doc(storeId);
     const storeSnap = await storeRef.get();
     if (!storeSnap.exists) {
-      throw new functions.https.HttpsError("not-found", "Store not found.");
+      throw new functions.https
+      .HttpsError("not-found", "Store not found.");
     }
     const storeName = (storeSnap.get("name") as string) || "";
 
