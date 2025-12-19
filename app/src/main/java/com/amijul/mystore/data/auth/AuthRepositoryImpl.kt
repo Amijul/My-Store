@@ -17,6 +17,10 @@ class AuthRepositoryImpl(
     override suspend fun signUp(email: String, password: String) {
         auth.createUserWithEmailAndPassword(email, password).await()
     }
+    override suspend fun refreshToken() {
+        auth.currentUser?.getIdToken(true)?.await()
+    }
+
 
     override suspend fun sendPasswordReset(email: String) {
         auth.sendPasswordResetEmail(email).await()

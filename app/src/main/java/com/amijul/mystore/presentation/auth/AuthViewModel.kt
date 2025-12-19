@@ -72,6 +72,7 @@ class AuthViewModel(
                 _authState.value = _authState.value.copy(isLoading = false)
                 onSuccess()
             } catch (e: Exception) {
+                e.printStackTrace() // IMPORTANT: shows real cause in Logcat
                 _authState.value = _authState.value.copy(
                     isLoading = false,
                     error = mapAuthError(e)
@@ -104,7 +105,8 @@ class AuthViewModel(
             _authState.value = _authState.value.copy(isLoading = true, error = null)
             try {
                 authRepo.signUp(email = email, password = pass) // ✅ awaited in repo
-                roleRepo.ensureBuyerRole()
+                roleRepo.setRoleAfterSignup(role = "buyer")
+                authRepo.refreshToken()
                 _authState.value = _authState.value.copy(isLoading = false)
                 onSuccess()
             } catch (e: Exception) {
@@ -149,7 +151,8 @@ class AuthViewModel(
     }
 
 
-    private fun mapAuthError(e: Exception): String {
+    private fun mapAuthError(e: Exception): String
+    {
         return when (e) {
 
             // 🔌 No internet / network issue

@@ -13,6 +13,13 @@ class FirebaseRoleRepository(
     private val functions: FirebaseFunctions
 ) : RoleRepository {
 
+    override suspend fun setRoleAfterSignup(role: String) {
+        val data = hashMapOf("role" to role)
+        functions.getHttpsCallable("setRoleAfterSignup")
+            .call(data)
+            .await()
+    }
+
     override suspend fun ensureBuyerRole() {
         val uid = auth.currentUser?.uid ?: return
 

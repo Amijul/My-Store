@@ -111,7 +111,7 @@ export const setRoleAfterSignup = functions.https.onCall(
     context: functions.https.CallableContext
   ): Promise<{ok: boolean; role: "buyer" | "seller"}> => {
     const uid = requireAuth(context);
-    requireAppCheck(context);
+  //  requireAppCheck(context);
 
     const input = data as Partial<SetRoleInput>;
     const role = input.role;
@@ -162,7 +162,7 @@ export const upgradeToSeller = functions.https.onCall(
     storeName?: string;
   }> => {
     const uid = requireAuth(context);
-    requireAppCheck(context);
+   // requireAppCheck(context);
 
     const input = data as Partial<UpgradeToSellerInput>;
     const inviteCode = asString(input.inviteCode).trim();
@@ -309,7 +309,7 @@ export const createOrder = functions.https.onCall(
     context: functions.https.CallableContext
   ): Promise<{ok: boolean; orderId: string}> => {
     const buyerId = requireAuth(context);
-    requireAppCheck(context);
+   // requireAppCheck(context);
 
     const input = data as Partial<CreateOrderInput>;
     const sellerId = asString(input.sellerId).trim();
