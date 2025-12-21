@@ -13,7 +13,6 @@ class ProductFirestoreDataSource(
             .collection("stores")
             .document(storeId)
             .collection("products")
-            .whereEqualTo("isActive", true) // safe even if missing (will exclude old docs)
             .get()
             .await()
 
@@ -69,8 +68,7 @@ class ProductFirestoreDataSource(
         val unitMap = doc.get("unit") as? Map<*, *>
         if (unitMap != null) {
             val type = unitMap["type"] as? String
-            val valueAny = unitMap["value"]
-            val value = when (valueAny) {
+            val value = when (val valueAny = unitMap["value"]) {
                 is Number -> valueAny.toDouble()
                 is String -> valueAny.toDoubleOrNull()
                 else -> null

@@ -75,8 +75,8 @@ fun MyStoreApp(
                     accountUi = accountState.accountUi,
                     onItemClick = { action ->
                         when (action) {
-                            AccountNavAction.Orders -> {
-                                homeViewModel.setBottomNav(1)
+                            AccountNavAction.Cart -> {
+                                navController.navigate(Routes.Cart.route)
                             }
                             AccountNavAction.MyDetails ->
                                 navController.navigate(Routes.MyDetails.route)
@@ -90,8 +90,6 @@ fun MyStoreApp(
                             AccountNavAction.About ->
                                 navController.navigate(Routes.About.route)
 
-                            AccountNavAction.SellerUpgrade ->
-                                navController.navigate(Routes.SellerUpgrade.route)
                         }
                     },
                     onLogout = {

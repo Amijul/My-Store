@@ -329,8 +329,7 @@ export const createStoreForSeller = functions.https.onCall(
  */
 type UpsertProductInput = {
   productId?: string;
-  category: "grocery" | "sweets" | "clothes" | "pharmacy" | "other";
-  subCategory?: string;
+
 
   name: string;
   description?: string;
@@ -349,16 +348,21 @@ type UpsertProductInput = {
   isActive?: boolean;
 };
 
+
+
+
 /**
  * @param {unknown} data Callable payload.
  * @param {functions.https.CallableContext} context Callable context.
  * @return {Promise<{ok:boolean,storeId:string,productId:string}>} Result.
  */
+
+
 export const upsertProduct = functions.https.onCall(
   async (
     data: unknown,
     context: functions.https.CallableContext
-  ): Promise<{ok: boolean; storeId: string; productId: string}> => {
+  ): Promise<{ ok: boolean; storeId: string; productId: string }> => {
     const uid = requireAuth(context);
 
     const userRef = admin.firestore().collection("users").doc(uid);
@@ -375,26 +379,11 @@ export const upsertProduct = functions.https.onCall(
 
     const input = data as Partial<UpsertProductInput>;
     const name = asString(input.name).trim();
-    const category = input.category;
 
     if (!name) {
       throw new functions.https.HttpsError(
         "invalid-argument",
         "name is required."
-      );
-    }
-
-    const allowedCategory =
-      category === "grocery" ||
-      category === "sweets" ||
-      category === "clothes" ||
-      category === "pharmacy" ||
-      category === "other";
-
-    if (!allowedCategory) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Invalid category."
       );
     }
 
@@ -406,44 +395,50 @@ export const upsertProduct = functions.https.onCall(
       );
     }
 
+    const unit = asString(input.unit).trim();
+    if (!unit) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "unit is required."
+      );
+    }
+
+    const stockQtyRaw = asNumber(input.stockQty);
+    const stockQty =
+      Number.isFinite(stockQtyRaw) && stockQtyRaw >= 0 ? stockQtyRaw : 0;
+
     const productId = asString(input.productId).trim();
-    const productsCol = admin.firestore()
+
+    const productsCol = admin
+      .firestore()
       .collection("stores")
       .doc(storeId)
       .collection("products");
 
-    const productRef = productId ? productsCol
-    .doc(productId) : productsCol.doc();
+    const productRef = productId ? productsCol.doc(productId) : productsCol.doc();
 
     const now = admin.firestore.FieldValue.serverTimestamp();
 
-    const unit = asString(input.unit).trim();
     const thumb = asString(input.thumbnail).trim();
     const imageUrl = asString(input.imageUrl).trim();
 
     const doc: Record<string, unknown> = {
       productId: productRef.id,
       storeId: storeId,
-      category: category,
-      subCategory: asString(input.subCategory).trim() || null,
 
       name: name,
-      description: asString(input.description).trim() || null,
+      description: asString(input.description).trim() || "",
 
-      thumbnail: (thumb || imageUrl) || null,
-      imageUrl: (thumb || imageUrl) || null,
+      thumbnail: thumb || imageUrl || "",
+      imageUrl: imageUrl || thumb || "",
 
-      currency: input.currency || "INR",
       price: price,
+      unit: unit,
+      stockQty: stockQty,
 
       inStock: typeof input.inStock === "boolean" ? input.inStock : true,
-      stockQty: Number.isFinite(asNumber(input.stockQty))
-        ? asNumber(input.stockQty)
-        : null,
-
-      unit: unit || null,
-
       isActive: typeof input.isActive === "boolean" ? input.isActive : true,
+
       updatedAt: now,
     };
 
@@ -451,11 +446,143 @@ export const upsertProduct = functions.https.onCall(
       doc.createdAt = now;
     }
 
-    await productRef.set(doc, {merge: true});
+    await productRef.set(doc, { merge: true });
 
-    return {ok: true, storeId: storeId, productId: productRef.id};
+    return { ok: true, storeId: storeId, productId: productRef.id };
   }
 );
+
+
+type DeleteProductInput = { productId: string };
+
+export const deleteMyProduct = functions.https.onCall(
+  async (
+    data: unknown,
+    context: functions.https.CallableContext
+  ): Promise<{ ok: boolean }> => {
+    const uid = requireAuth(context);
+
+    const input = data as Partial<DeleteProductInput>;
+    const productId = asString(input.productId).trim();
+
+    if (!productId) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "productId is required."
+      );
+    }
+
+    const userRef = admin.firestore().collection("users").doc(uid);
+    const userSnap = await userRef.get();
+    const role = asString(userSnap.get("role"));
+    const storeId = asString(userSnap.get("storeId"));
+
+    if (role !== "seller" || !storeId) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Seller store not found."
+      );
+    }
+
+    const storeRef = admin.firestore().collection("stores").doc(storeId);
+    const storeSnap = await storeRef.get();
+    const ownerUid = asString(storeSnap.get("ownerUid"));
+
+    if (ownerUid !== uid) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Not store owner."
+      );
+    }
+
+    // 1) Delete product doc
+    await storeRef.collection("products").doc(productId).delete();
+
+    // 2) Delete product image in Storage (ignore failures)
+    const bucket = admin.storage().bucket();
+    const file = bucket.file(`stores/${storeId}/products/${productId}.jpg`);
+    try {
+      await file.delete({ ignoreNotFound: true });
+    } catch {
+      // ignore
+    }
+
+    return { ok: true };
+  }
+);
+
+
+type UpdateStoreImageInput = { imageUrl: string };
+
+export const updateStoreImage = functions.https.onCall(
+  async (
+    data: unknown,
+    context: functions.https.CallableContext
+  ): Promise<{ ok: boolean }> => {
+    const uid = requireAuth(context);
+
+    const input = data as Partial<UpdateStoreImageInput>;
+    const imageUrl = asString(input.imageUrl).trim();
+
+    if (!imageUrl) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "imageUrl is required."
+      );
+    }
+
+    const userRef = admin.firestore().collection("users").doc(uid);
+    const userSnap = await userRef.get();
+    const storeId = asString(userSnap.get("storeId"));
+
+    if (!storeId) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Seller store not found."
+      );
+    }
+
+    const storeRef = admin.firestore().collection("stores").doc(storeId);
+    const storeSnap = await storeRef.get();
+
+    if (!storeSnap.exists) {
+      throw new functions.https.HttpsError(
+        "not-found",
+        "Store does not exist."
+      );
+    }
+
+    const ownerUid = asString(storeSnap.get("ownerUid"));
+    if (ownerUid !== uid) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Not store owner."
+      );
+    }
+
+    const now = admin.firestore.FieldValue.serverTimestamp();
+
+    await storeRef.set(
+      {
+        profileImage: imageUrl,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+
+    // Optional: mirror it into user doc for convenience
+    await userRef.set(
+      {
+        storeImage: imageUrl,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+
+    return { ok: true };
+  }
+);
+
 
 /**
  * 5) Create order: buyer places order for a store.

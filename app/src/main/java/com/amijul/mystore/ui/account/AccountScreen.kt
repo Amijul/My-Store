@@ -56,12 +56,11 @@ fun AccountScreen(
 ) {
     val bg = Color(0xFFF3F4F6) // soft light background like screenshot
     val items = listOf(
-        AccountRowItem("Orders", Icons.AutoMirrored.Filled.ReceiptLong) { onItemClick(AccountNavAction.Orders) },
+        AccountRowItem("Cart", Icons.AutoMirrored.Filled.ReceiptLong) { onItemClick(AccountNavAction.Cart) },
         AccountRowItem("My Details", Icons.Filled.VerifiedUser) { onItemClick(AccountNavAction.MyDetails) },
         AccountRowItem("Delivery Address", Icons.Filled.LocationOn) { onItemClick(AccountNavAction.DeliveryAddress) },
         AccountRowItem("Help", Icons.Filled.SupportAgent) { onItemClick(AccountNavAction.Help) },
         AccountRowItem("About", Icons.Filled.Info) { onItemClick(AccountNavAction.About) },
-        AccountRowItem("Upgrade to Seller", Icons.Filled.Sell) { onItemClick(AccountNavAction.SellerUpgrade) },
 
         )
 
