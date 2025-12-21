@@ -22,7 +22,7 @@ function asNumber(value: unknown): number {
 }
 
 /**
- * @param {functions.https.CallableContext} context Callable context.
+ * @param {functions.https.CallableContext} context
  * @return {string} UID.
  */
 function requireAuth(context: functions.https.CallableContext): string {
@@ -351,13 +351,6 @@ type UpsertProductInput = {
 
 
 
-/**
- * @param {unknown} data Callable payload.
- * @param {functions.https.CallableContext} context Callable context.
- * @return {Promise<{ok:boolean,storeId:string,productId:string}>} Result.
- */
-
-
 export const upsertProduct = functions.https.onCall(
   async (
     data: unknown,
@@ -415,7 +408,8 @@ export const upsertProduct = functions.https.onCall(
       .doc(storeId)
       .collection("products");
 
-    const productRef = productId ? productsCol.doc(productId) : productsCol.doc();
+    const productRef = productId ?
+     productsCol.doc(productId) : productsCol.doc();
 
     const now = admin.firestore.FieldValue.serverTimestamp();
 
@@ -436,8 +430,11 @@ export const upsertProduct = functions.https.onCall(
       unit: unit,
       stockQty: stockQty,
 
-      inStock: typeof input.inStock === "boolean" ? input.inStock : true,
-      isActive: typeof input.isActive === "boolean" ? input.isActive : true,
+      inStock: typeof input.inStock === "boolean"
+       ? input.inStock : true,
+
+      isActive: typeof input.isActive === "boolean"
+       ? input.isActive : true,
 
       updatedAt: now,
     };
