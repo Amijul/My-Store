@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+
 admin.initializeApp();
 
 type OrderItemPayload = {
@@ -24,76 +25,84 @@ export const createOrder = onCall(async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Login required.");
 
-  const data = req.data || {};
-  const storeId = String(data.storeId || "").trim();
-  const storeName = String(data.storeName || "").trim();
-  const items = (data.items || []) as OrderItemPayload[];
-  const address = data.address as AddressPayload | undefined;
+  const data = (req.data ?? {}) as {
+    storeId?: string;
+    storeName?: string;
+    items?: OrderItemPayload[];
+    address?: AddressPayload;
+  };
 
-  if (!storeId) throw new
-  HttpsError("invalid-argument", "storeId required");
+  const storeId = String(data.storeId ?? "").trim();
+  const items = (data.items ?? []) as OrderItemPayload[];
+  const address = data.address;
 
-  if (!storeName) throw new
-  HttpsError("invalid-argument", "storeName required");
-
-  if (!address) throw new
-  HttpsError("invalid-argument", "address required");
-
-  if (!Array.isArray(items) || items.length === 0)
-    throw new
-     HttpsError("invalid-argument", "items required");
-
-  // Get store ownerUid
-  const storeRef = admin.firestore()
-  .collection("stores").doc(storeId);
-
-  const storeSnap = await storeRef.get();
-
-  if (!storeSnap.exists) throw new
-   HttpsError("not-found", "Store not found");
-
-  const ownerUid = (storeSnap.get("ownerUid") as string) || "";
-
-  if (!ownerUid) throw new
-   HttpsError("failed-precondition", "Store owner missing");
+  if (!storeId) throw new HttpsError("invalid-argument", "storeId required");
+  if (!address) throw new HttpsError("invalid-argument", "address required");
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new HttpsError("invalid-argument", "items required");
+  }
 
   // Validate items
   for (const it of items) {
-    if (!it.productId || !it.name)
-    throw new HttpsError("invalid-argument", "Invalid item");
-
-    if (!Number.isFinite(it.unitPrice) || it.unitPrice <= 0)
-      throw new
-      HttpsError("invalid-argument", "Invalid unitPrice");
-
-    if (!Number.isInteger(it.qty) || it.qty <= 0)
-      throw new
-      HttpsError("invalid-argument", "Invalid qty");
+    if (!it.productId || !it.name) {
+      throw new HttpsError("invalid-argument", "Invalid item");
+    }
+    if (!Number.isFinite(it.unitPrice) || it.unitPrice <= 0) {
+      throw new HttpsError("invalid-argument", "Invalid unitPrice");
+    }
+    if (!Number.isInteger(it.qty) || it.qty <= 0) {
+      throw new HttpsError("invalid-argument", "Invalid qty");
+    }
   }
 
-  const itemsTotal = items.reduce((sum, it) =>
-  sum + it.unitPrice * it.qty, 0);
+  const db = admin.firestore();
+
+  // Read store + ownerUid + storeName from server (do not trust client)
+  const storeRef = db.collection("stores").doc(storeId);
+  const storeSnap = await storeRef.get();
+
+  if (!storeSnap.exists) throw new HttpsError("not-found", "Store not found");
+
+  const ownerUid = String(storeSnap.get("ownerUid") ?? "").trim();
+  if (!ownerUid) {
+    throw new HttpsError("failed-precondition", "Store owner missing");
+  }
+
+  const storeName = String(storeSnap.get("name") ?? "").trim()
+    || String((data.storeName ?? "")).trim();
+
+  if (!storeName) {
+    throw new HttpsError("failed-precondition", "Store name missing");
+  }
+
+  // Buyer snapshot (optional)
+  const userSnap = await db.collection("users").doc(uid).get();
+  const buyerName = String(userSnap.get("name") ?? "").trim()
+    || String(address.fullName ?? "").trim()
+    || "Buyer";
+
+  const buyerPhone = String(userSnap.get("phone") ?? "").trim()
+    || String(address.phone ?? "").trim()
+    || "";
+
+  const itemsTotal = items.reduce((sum, it) => {
+    return sum + it.unitPrice * it.qty;
+  }, 0);
+
   const shipping = 0;
   const grandTotal = itemsTotal + shipping;
 
-  // Buyer snapshot (optional)
-  const userSnap = await admin.firestore()
-  .collection("users").doc(uid).get();
-
-  const buyerName = (userSnap.get("name") as string) ||
-   address.fullName || "Buyer";
-
-  const buyerPhone = (userSnap.get("phone") as string) ||
-   address.phone || "";
-
-  const db = admin.firestore();
   const orderRef = db.collection("stores")
-  .doc(storeId).collection("orders").doc();
-  const now = admin.firestore.FieldValue
-  .serverTimestamp();
+    .doc(storeId)
+    .collection("orders")
+    .doc();
 
+  const orderId = orderRef.id;
+  const now = admin.firestore.FieldValue.serverTimestamp();
+
+  // Canonical store order doc
   const orderDoc = {
-    orderId: orderRef.id,
+    orderId,
     storeId,
     storeName,
     ownerUid,
@@ -121,8 +130,35 @@ export const createOrder = onCall(async (req) => {
     },
   };
 
+  // Buyer-scoped mirror (THIS FIXES your buyer app realtime read)
+  const buyerOrderRef = db.collection("users")
+    .doc(uid)
+    .collection("orders")
+    .doc(orderId);
+
+  const buyerOrderDoc = {
+    orderId,
+    storeId,
+    storeName,
+    buyerId: uid,
+
+    status: "PLACED",
+    createdAt: now,
+    updatedAt: now,
+
+    itemsTotal,
+    shipping,
+    grandTotal,
+
+    // Optional display fields
+    buyerName,
+    buyerPhone,
+  };
+
   const batch = db.batch();
+
   batch.set(orderRef, orderDoc);
+  batch.set(buyerOrderRef, buyerOrderDoc);
 
   for (const it of items) {
     const itemRef = orderRef.collection("items").doc();
@@ -130,7 +166,7 @@ export const createOrder = onCall(async (req) => {
       itemId: itemRef.id,
       productId: it.productId,
       name: it.name,
-      imageUrl: it.imageUrl || "",
+      imageUrl: it.imageUrl ?? "",
       unitPrice: it.unitPrice,
       qty: it.qty,
       lineTotal: it.unitPrice * it.qty,
@@ -138,5 +174,5 @@ export const createOrder = onCall(async (req) => {
   }
 
   await batch.commit();
-  return { orderId: orderRef.id };
+  return { orderId };
 });
