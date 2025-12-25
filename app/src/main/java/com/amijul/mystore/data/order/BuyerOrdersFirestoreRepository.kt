@@ -1,85 +1,81 @@
 package com.amijul.mystore.data.order
 
-import com.amijul.mystore.domain.order.OrderDocUi
-import com.amijul.mystore.domain.order.OrderItemDocUi
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
+data class BuyerOrderCardUi(
+    val orderId: String,
+    val storeId: String,
+    val storeName: String,
+    val status: String,
+    val grandTotal: Double,
+    val createdAtMillis: Long
+)
+
 class BuyerOrdersFirestoreRepository(
     private val db: FirebaseFirestore
 ) {
-    fun observeOrder(storeId: String, orderId: String) = callbackFlow<OrderDocUi?> {
-        val ref = db.collection("stores").document(storeId)
-            .collection("orders").document(orderId)
+    fun observeActive(buyerId: String) = observeByStatuses(
+        buyerId = buyerId,
+        statuses = listOf("PLACED", "ACCEPTED")
+    )
 
-        val reg: ListenerRegistration = ref.addSnapshotListener { snap, _ ->
-            if (snap == null || !snap.exists()) {
-                trySend(null); return@addSnapshotListener
-            }
-            val addr = snap.get("address") as? Map<*, *>
-            val addressText = buildString {
-                val fullName = addr?.get("fullName") as? String ?: ""
-                val phone = addr?.get("phone") as? String ?: ""
-                val line1 = addr?.get("line1") as? String ?: ""
-                val line2 = addr?.get("line2") as? String ?: ""
-                val city = addr?.get("city") as? String ?: ""
-                val state = addr?.get("state") as? String ?: ""
-                val pincode = addr?.get("pincode") as? String ?: ""
-                append(fullName)
-                if (phone.isNotBlank()) append(" • $phone")
-                append("\n$line1")
-                if (line2.isNotBlank()) append(", $line2")
-                append("\n$city, $state - $pincode")
+    fun observePast(buyerId: String) = observeByStatuses(
+        buyerId = buyerId,
+        statuses = listOf("REJECTED", "CANCELLED", "DELIVERED")
+    )
+
+    private fun observeByStatuses(buyerId: String, statuses: List<String>) =
+        callbackFlow<List<BuyerOrderCardUi>> {
+
+            var lastGood: List<BuyerOrderCardUi> = emptyList()
+
+            val ref = db.collection("users")
+                .document(buyerId)
+                .collection("orders")
+                .whereIn("status", statuses)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+
+            val reg: ListenerRegistration = ref.addSnapshotListener { snap, err ->
+                if (err != null) {
+                    // DO NOT clear list (prevents "appear then gone")
+                    trySend(lastGood)
+                    return@addSnapshotListener
+                }
+
+                val list = snap?.documents.orEmpty().map { d ->
+                    val oid = d.getString("orderId").orEmpty().ifBlank { d.id }
+                    val createdAtMillis =
+                        d.getTimestamp("createdAt")?.toDate()?.time
+                            ?: d.getTimestamp("updatedAt")?.toDate()?.time
+                            ?: 0L
+
+                    BuyerOrderCardUi(
+                        orderId = oid,
+                        storeId = d.getString("storeId").orEmpty(),
+                        storeName = d.getString("storeName").orEmpty(),
+                        status = d.getString("status").orEmpty(),
+                        grandTotal = d.getDouble("grandTotal") ?: 0.0,
+                        createdAtMillis = createdAtMillis
+                    )
+                }
+
+                lastGood = list
+                trySend(list)
             }
 
-            trySend(
-                OrderDocUi(
-                    orderId = snap.getString("orderId").orEmpty(),
-                    storeId = snap.getString("storeId").orEmpty(),
-                    storeName = snap.getString("storeName").orEmpty(),
-                    status = snap.getString("status").orEmpty(),
-                    buyerName = snap.getString("buyerName").orEmpty(),
-                    buyerPhone = snap.getString("buyerPhone").orEmpty(),
-                    itemsTotal = snap.getDouble("itemsTotal") ?: 0.0,
-                    shipping = snap.getDouble("shipping") ?: 0.0,
-                    grandTotal = snap.getDouble("grandTotal") ?: 0.0,
-                    addressText = addressText
-                )
-            )
+            awaitClose { reg.remove() }
         }
 
-        awaitClose { reg.remove() }
-    }
-
-    fun observeOrderItems(storeId: String, orderId: String) = callbackFlow<List<OrderItemDocUi>> {
-        val ref = db.collection("stores").document(storeId)
+    // Optional: if you still want client cancel (rules allow mirror update)
+    suspend fun cancelMirrorOnly(buyerId: String, orderId: String) {
+        db.collection("users").document(buyerId)
             .collection("orders").document(orderId)
-            .collection("items")
-
-        val reg = ref.addSnapshotListener { snap, _ ->
-            val list = snap?.documents.orEmpty().map { d ->
-                OrderItemDocUi(
-                    productId = d.getString("productId").orEmpty(),
-                    name = d.getString("name").orEmpty(),
-                    imageUrl = d.getString("imageUrl").orEmpty(),
-                    unitPrice = d.getDouble("unitPrice") ?: 0.0,
-                    qty = (d.getLong("qty") ?: 0L).toInt(),
-                    lineTotal = d.getDouble("lineTotal") ?: 0.0
-                )
-            }
-            trySend(list)
-        }
-
-        awaitClose { reg.remove() }
-    }
-
-    suspend fun cancelOrder(storeId: String, orderId: String) {
-        db.collection("stores").document(storeId)
-            .collection("orders").document(orderId)
-            .update("status", "CANCELLED")
+            .update(mapOf("status" to "CANCELLED"))
             .await()
     }
 }

@@ -54,36 +54,39 @@ fun CheckoutScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(bg)
+            .statusBarsPadding()
     ) {
+
+        Spacer(Modifier.height(10.dp))
+
+        // Top bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .background(Color.White)
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        )
+        {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+            Text(
+                text = "Checkout",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(8.dp))
+        }
+
+
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            Spacer(Modifier.height(10.dp))
-
-            // Top bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .background(Color.White),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back Arrow"
-                    )
-                }
-
-
-                Text(
-                    text = "Checkout",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
-                )
-
-            }
 
             Spacer(Modifier.height(10.dp))
 

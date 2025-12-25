@@ -1,5 +1,6 @@
 package com.amijul.mystore.domain.order
 
+
 data class OrderDocUi(
     val orderId: String,
     val storeId: String,
@@ -11,6 +12,7 @@ data class OrderDocUi(
     val shipping: Double,
     val grandTotal: Double,
     val addressText: String,
+    val createdAtMillis: Long,
 )
 
 data class OrderItemDocUi(

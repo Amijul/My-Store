@@ -2,20 +2,17 @@ package com.amijul.mystore.ui.order.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -24,28 +21,29 @@ import com.amijul.mystore.ui.order.OrderUiState
 
 @Composable
 fun ActiveBody(
-    state: OrderUiState,
-    onIncrease: (String) -> Unit,
-    onDecrease: (String) -> Unit,
-    onBuyNow: () -> Unit,
-    isLoading: Boolean,
+    state: OrderUiState
 ) {
     val active = state.active
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(bottom = 140.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         userScrollEnabled = true
     ) {
         item {
             PremiumCard {
-                Text("Delivery Address", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                Text(
+                    "Delivery Address",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
+                )
                 Spacer(Modifier.height(8.dp))
 
                 if (!active.hasAddress) {
                     Text(
-                        "No address found. Add one so the delivery guy doesn’t have to become Sherlock Holmes.",
+                        "No address found. Add one in Account → Address.",
                         color = Color(0xFF6B7280)
                     )
                 } else {
@@ -56,60 +54,40 @@ fun ActiveBody(
 
         item {
             Text(
-                text = "Items",
+                text = "Active Orders",
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
             )
         }
 
-        if (active.items.isEmpty()) {
+        if (active.orders.isEmpty()) {
             item {
                 PremiumCard {
                     Text(
-                        "Your cart is empty.\nGo add something and make your future self proud.",
+                        "No active orders right now.",
                         color = Color(0xFF6B7280)
                     )
                 }
             }
         } else {
-            items(active.items) { it ->
-                PremiumItemRow(
-                    item = it,
-                    onIncrease = { onIncrease(it.productId) },
-                    onDecrease = { onDecrease(it.productId) }
-                )
-            }
-
-
-            item {
+            items(active.orders, key = { it.orderId }) { o ->
                 PremiumCard {
-                    Text("Total", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            o.orderId.take(8),
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                            modifier = Modifier.weight(1f)
+                        )
+                        StatusPill(o.status)
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(o.dateText, color = Color(0xFF6B7280))
                     Spacer(Modifier.height(10.dp))
-                    PriceRow("Subtotal", "₹${active.price.subTotal}")
-                    PriceRow("Shipping", "₹${active.price.shipping}")
-                    Spacer(Modifier.height(10.dp))
-                    HorizontalDivider(color = Color(0xFFEAEAEA))
-                    Spacer(Modifier.height(10.dp))
-                    PriceRowStrong("Total", "₹${active.price.total}")
+                    Text(
+                        "Total: ₹${o.total}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                    )
                 }
             }
-
-            item {
-                Spacer(Modifier.height(6.dp))
-
-                Button(
-                    onClick = onBuyNow,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(30),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF515F86)),
-                    enabled = !isLoading && state.active.items.isNotEmpty() && state.active.hasAddress
-                ) {
-                    Text("BUY", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
-                }
-            }
-
-
         }
     }
 }

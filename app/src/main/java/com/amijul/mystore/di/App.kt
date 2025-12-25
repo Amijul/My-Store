@@ -27,7 +27,6 @@ import com.amijul.mystore.ui.account.address.EditAddressViewModel
 import com.amijul.mystore.ui.account.profile.EditUserProfileViewModel
 import com.amijul.mystore.ui.cart.CartViewModel
 import com.amijul.mystore.ui.home.HomeViewModel
-import com.amijul.mystore.ui.order.OrderDetailsViewModel
 import com.amijul.mystore.ui.order.OrderViewModel
 import com.amijul.mystore.ui.products.ProductListViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -88,7 +87,6 @@ private val appModule = module {
 
     single { BuyerOrdersFirestoreRepository(get()) }
 
-
     // ViewModels
     viewModel { HomeViewModel() }
 
@@ -116,6 +114,7 @@ private val appModule = module {
             addressDao = get(),
             cartRepo = get(),
             orderRepo = get(),
+            buyerOrdersRepo = get(),
             orderRemoteRepo = get()
         )
     }
@@ -151,13 +150,7 @@ private val appModule = module {
         )
     }
 
-    viewModel { (storeId: String, orderId: String) ->
-        OrderDetailsViewModel(
-            storeId = storeId,
-            orderId = orderId,
-            repo = get()
-        )
-    }
+
 
 
 

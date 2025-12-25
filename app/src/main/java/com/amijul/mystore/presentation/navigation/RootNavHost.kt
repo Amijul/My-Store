@@ -20,8 +20,6 @@ import com.amijul.mystore.ui.account.address.EditAddressScreen
 import com.amijul.mystore.ui.account.profile.EditUserProfileScreen
 import com.amijul.mystore.ui.cart.CartScreen
 import com.amijul.mystore.ui.checkout.CheckoutScreen
-import com.amijul.mystore.ui.order.OrderDetailsViewModel
-import com.amijul.mystore.ui.orderdetails.OrderDetailsScreen
 import com.amijul.mystore.ui.products.ProductListScreen
 import com.amijul.mystore.ui.products.ProductListViewModel
 import com.amijul.mystore.ui.products.productdetails.ProductDetailScreen
@@ -190,34 +188,14 @@ fun RootNavHost(
                 storeId = storeId,
                 storeName = storeName,
                 onOrderPlaced = { orderId ->
-                    navController.navigate(Routes.OrderDetails.createRoute(storeId, orderId)) {
-                        launchSingleTop = true
-                    }
+
                 },
                 onBack = { navController.popBackStack() }
             )
         }
 
 
-        composable(
-            route = Routes.OrderDetails.route,
-            arguments = listOf(
-                navArgument("storeId") { type = NavType.StringType },
-                navArgument("orderId") { type = NavType.StringType }
-            )
-        ) { entry ->
-            val storeId = entry.arguments?.getString("storeId") ?: return@composable
-            val orderId = entry.arguments?.getString("orderId") ?: return@composable
 
-            val vm: OrderDetailsViewModel = koinViewModel(parameters = { parametersOf(storeId, orderId) })
-
-            OrderDetailsScreen(
-                storeId = storeId,
-                orderId = orderId,
-                onBack = { navController.popBackStack() },
-                vm = vm
-            )
-        }
 
 
 

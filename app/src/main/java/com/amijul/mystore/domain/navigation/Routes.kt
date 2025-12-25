@@ -36,9 +36,7 @@ sealed class Routes(val route: String) {
             "checkout/$storeId/${Uri.encode(storeName)}"
     }
 
-    data object OrderDetails: Routes("order_details/{storeId}/{orderId}") {
-        fun createRoute(storeId: String, orderId: String) = "order_details/$storeId/$orderId"
-    }
+
 
     // Account stack
     data object MyDetails : Routes("myDetails")

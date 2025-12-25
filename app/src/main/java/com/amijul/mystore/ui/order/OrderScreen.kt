@@ -39,10 +39,8 @@ fun OrderScreen(
     var tab by remember { mutableStateOf(OrdersTab.Active) }
 
     LaunchedEffect(Unit) {
-
         orderViewModel.start()
     }
-
 
     Box(
         modifier = modifier
@@ -50,7 +48,6 @@ fun OrderScreen(
             .background(Color(0xFFD9E3FF))
             .statusBarsPadding()
     ) {
-
         Column(modifier = Modifier.fillMaxSize()) {
 
             Spacer(Modifier.height(12.dp))
@@ -63,28 +60,14 @@ fun OrderScreen(
             Spacer(Modifier.height(12.dp))
 
             when (tab) {
-                OrdersTab.Active -> ActiveBody(
-                    state = state,
-                    onIncrease = { productId -> orderViewModel.increaseQty(productId) },
-                    onDecrease = { productId -> orderViewModel.decreaseQty(productId) },
-                    onBuyNow = { //orderViewModel.buyNow()
-                               },
-                    isLoading = state.isLoading
-                )
-
-
-
+                OrdersTab.Active -> ActiveBody(state = state)
                 OrdersTab.Past -> PastBody(state = state)
             }
         }
 
-
-
-        // simple message popup (optional)
         if (state.message != null) {
             LaunchedEffect(state.message) {
-                // auto clear after showing once (or keep)
-                // viewModel.clearMessage()
+                // orderViewModel.clearMessage()
             }
         }
     }
@@ -95,35 +78,24 @@ private fun OrdersTabs(
     tab: OrdersTab,
     onTabChange: (OrdersTab) -> Unit,
 ) {
-
-        Row(modifier = Modifier.fillMaxWidth()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
             .background(Color.White)
-            .padding(6.dp)) {
-            TabBtn(
-                selected = tab == OrdersTab.Active,
-                text = "Active Orders",
-                onClick = { onTabChange(OrdersTab.Active) },
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(Modifier.width(8.dp))
-            TabBtn(
-                selected = tab == OrdersTab.Past,
-                text = "Past Orders",
-                onClick = { onTabChange(OrdersTab.Past) },
-                modifier = Modifier.weight(1f)
-            )
-        }
-
+            .padding(6.dp)
+    ) {
+        TabBtn(
+            selected = tab == OrdersTab.Active,
+            text = "Active Orders",
+            onClick = { onTabChange(OrdersTab.Active) },
+            modifier = Modifier.weight(1f)
+        )
+        Spacer(Modifier.width(8.dp))
+        TabBtn(
+            selected = tab == OrdersTab.Past,
+            text = "Past Orders",
+            onClick = { onTabChange(OrdersTab.Past) },
+            modifier = Modifier.weight(1f)
+        )
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-

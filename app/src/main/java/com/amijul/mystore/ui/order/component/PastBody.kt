@@ -22,7 +22,9 @@ import com.amijul.mystore.ui.order.OrderUiState
 @Composable
 fun PastBody(state: OrderUiState) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
         contentPadding = PaddingValues(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -36,7 +38,7 @@ fun PastBody(state: OrderUiState) {
                 }
             }
         } else {
-            items(state.past) { o ->
+            items(state.past, key = { it.orderId }) { o ->
                 PremiumCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -49,7 +51,10 @@ fun PastBody(state: OrderUiState) {
                     Spacer(Modifier.height(6.dp))
                     Text(o.dateText, color = Color(0xFF6B7280))
                     Spacer(Modifier.height(10.dp))
-                    Text("Total: ₹${o.total}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+                    Text(
+                        "Total: ₹${o.total}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                    )
                 }
             }
         }

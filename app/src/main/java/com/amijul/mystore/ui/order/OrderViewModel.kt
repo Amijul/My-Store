@@ -3,35 +3,27 @@ package com.amijul.mystore.ui.order
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.amijul.mystore.data.local.address.AddressDao
+import com.amijul.mystore.data.order.BuyerOrdersFirestoreRepository
 import com.amijul.mystore.domain.cart.CartLocalRepository
 import com.amijul.mystore.domain.order.OrderLocalRepository
 import com.amijul.mystore.domain.order.OrderRemoteRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-data class OrderItemUi(
-    val storeId: String,
-    val productId: String,
-    val name: String,
-    val imageUrl: String,
-    val unitPrice: Float,
-    val quantity: Int
-)
- {
-    val lineTotal: Float get() = unitPrice * quantity
-}
-
-data class OrderPriceUi(
-    val subTotal: Float = 0f,
-    val shipping: Float = 0f,
-    val total: Float = 0f
+data class ActiveOrderCardUi(
+    val orderId: String,
+    val status: String,
+    val dateText: String,
+    val itemCount: Int,
+    val total: Float
 )
 
 data class PastOrderUi(
@@ -45,8 +37,7 @@ data class PastOrderUi(
 data class ActiveOrderUi(
     val addressText: String = "",
     val hasAddress: Boolean = false,
-    val items: List<OrderItemUi> = emptyList(),
-    val price: OrderPriceUi = OrderPriceUi()
+    val orders: List<ActiveOrderCardUi> = emptyList()
 )
 
 data class OrderUiState(
@@ -60,12 +51,19 @@ class OrderViewModel(
     private val userIdProvider: () -> String?,
     private val addressDao: AddressDao,
     private val cartRepo: CartLocalRepository,
-    private val orderRepo: OrderLocalRepository,
-    private val orderRemoteRepo: OrderRemoteRepository
+    private val orderRepo: OrderLocalRepository, // keep as-is (even if unused for now)
+    private val orderRemoteRepo: OrderRemoteRepository,
+    private val buyerOrdersRepo: BuyerOrdersFirestoreRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(OrderUiState())
     val state: StateFlow<OrderUiState> = _state.asStateFlow()
+
+    // IMPORTANT: prevents multiple collectors / listeners causing "disappear" flicker
+
+    private var activeJob: Job? = null
+    private var pastJob: Job? = null
+    private var addressJob: Job? = null
 
     fun start() {
         val uid = userIdProvider().orEmpty()
@@ -74,12 +72,16 @@ class OrderViewModel(
             return
         }
 
-        viewModelScope.launch {
-            combine(
-                addressDao.observeDefault(uid),
-                orderRepo.observeOrders(uid)
-            ) { addr, orders ->
+        activeJob?.cancel()
+        pastJob?.cancel()
+        addressJob?.cancel()
 
+        _state.value = _state.value.copy(isLoading = true, message = null)
+
+        val df = SimpleDateFormat("dd MMM, yyyy", Locale.getDefault())
+
+        addressJob = viewModelScope.launch {
+            addressDao.observeDefault(uid).collect { addr ->
                 val addressText = if (addr == null) "" else buildString {
                     append("${addr.fullName} • ${addr.phone}\n")
                     append(addr.line1)
@@ -87,38 +89,61 @@ class OrderViewModel(
                     append("\n${addr.city}, ${addr.state} - ${addr.pincode}")
                 }
 
-                val df = SimpleDateFormat("dd MMM, yyyy", Locale.getDefault())
-                val pastUi = orders.map { o ->
-                    PastOrderUi(
-                        orderId = o.orderId,
-                        status = o.status,
-                        dateText = df.format(Date(o.createdAtMillis)),
-                        itemCount = 0, // optional: join items later
-                        total = o.grandTotal
+                val cur = _state.value
+                _state.value = cur.copy(
+                    isLoading = false,
+                    active = cur.active.copy(
+                        addressText = addressText,
+                        hasAddress = addr != null
+                    )
+                )
+            }
+        }
+
+        activeJob = viewModelScope.launch {
+            buyerOrdersRepo.observeActive(uid)
+                .catch { e ->
+                    _state.value = _state.value.copy(isLoading = false, message = e.message ?: "Failed to load active orders")
+                }
+                .collect { list ->
+                    val activeUi = list.map { o ->
+                        ActiveOrderCardUi(
+                            orderId = o.orderId,
+                            status = o.status,
+                            dateText = if (o.createdAtMillis > 0) df.format(Date(o.createdAtMillis)) else "",
+                            itemCount = 0,
+                            total = o.grandTotal.toFloat()
+                        )
+                    }
+                    val cur = _state.value
+                    _state.value = cur.copy(
+                        isLoading = false,
+                        active = cur.active.copy(orders = activeUi)
                     )
                 }
+        }
 
-                OrderUiState(
-                    isLoading = false,
-                    active = ActiveOrderUi(
-                        addressText = addressText,
-                        hasAddress = addr != null,
-                        items = emptyList(), // Orders tab does not depend on cart
-                        price = OrderPriceUi()
-                    ),
-                    past = pastUi,
-                    message = null
-                )
-            }.collectLatest { newState ->
-                _state.value = newState
-            }
+        pastJob = viewModelScope.launch {
+            buyerOrdersRepo.observePast(uid)
+                .catch { e ->
+                    _state.value = _state.value.copy(isLoading = false, message = e.message ?: "Failed to load past orders")
+                }
+                .collect { list ->
+                    val pastUi = list.map { o ->
+                        PastOrderUi(
+                            orderId = o.orderId,
+                            status = o.status,
+                            dateText = if (o.createdAtMillis > 0) df.format(Date(o.createdAtMillis)) else "",
+                            itemCount = 0,
+                            total = o.grandTotal.toFloat()
+                        )
+                    }
+                    _state.value = _state.value.copy(isLoading = false, past = pastUi)
+                }
         }
     }
 
-    /**
-     * This should be called from Checkout flow (store-scoped), not Orders tab.
-     * It creates local order snapshot and clears only the current store cart.
-     */
+
     fun buyNow(
         storeId: String,
         storeName: String,
@@ -134,22 +159,19 @@ class OrderViewModel(
         }
 
         viewModelScope.launch {
-            val cart = cartRepo.getCartOnce(uid, storeId)
-            if (cart.isEmpty()) {
-                _state.value = _state.value.copy(message = "Cart is empty.")
-                return@launch
-            }
-
             try {
+                val cart = cartRepo.getCartOnce(uid, storeId)
+                if (cart.isEmpty()) {
+                    _state.value = _state.value.copy(message = "Cart is empty.")
+                    return@launch
+                }
+
                 val addr = addressDao.getDefault(uid)
                 if (addr == null) {
                     _state.value = _state.value.copy(message = "No default address found.")
                     return@launch
                 }
 
-                // IMPORTANT: createOrder payload must include full items details + address.
-                // Your current cloud function payload only has productId/qty.
-                // So we must update OrderFunctionsRepository to send name, unitPrice, imageUrl, address, storeName.
                 val orderId = orderRemoteRepo.createOrder(
                     storeId = storeId,
                     storeName = storeName,
@@ -158,9 +180,7 @@ class OrderViewModel(
                 )
 
                 cartRepo.clearStore(uid, storeId)
-
                 _state.value = _state.value.copy(message = "Order placed. OrderId: $orderId")
-
                 onSuccess(orderId)
 
             } catch (e: Exception) {
@@ -169,36 +189,14 @@ class OrderViewModel(
         }
     }
 
-
-
-
-    fun increaseQty(productId: String) {
-        val uid = userIdProvider().orEmpty()
-        if (uid.isBlank()) return
-
-        val item = _state.value.active.items.firstOrNull { it.productId == productId } ?: return
-
-        viewModelScope.launch {
-            cartRepo.setQty(uid, item.storeId, item.productId, item.quantity + 1)
-        }
-    }
-
-    fun decreaseQty(productId: String) {
-        val uid = userIdProvider().orEmpty()
-        if (uid.isBlank()) return
-
-        val item = _state.value.active.items.firstOrNull { it.productId == productId } ?: return
-
-        val newQty = (item.quantity - 1).coerceAtLeast(0)
-
-        viewModelScope.launch {
-            if (newQty <= 0) cartRepo.remove(uid, item.storeId, item.productId)
-            else cartRepo.setQty(uid, item.storeId, item.productId, newQty)
-        }
-    }
-
-
     fun clearMessage() {
         _state.value = _state.value.copy(message = null)
+    }
+
+    override fun onCleared() {
+        activeJob?.cancel()
+        pastJob?.cancel()
+        addressJob?.cancel()
+        super.onCleared()
     }
 }

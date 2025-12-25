@@ -12,39 +12,28 @@ class OrderFunctionsRepository(
     override suspend fun createOrder(
         storeId: String,
         storeName: String,
-        address: com.amijul.mystore.data.local.address.AddressEntity,
-        items: List<com.amijul.mystore.data.local.cart.CartItemEntity>
+        buyerName: String,
+        buyerPhone: String,
+        itemsTotal: Double,
+        shipping: Double,
+        grandTotal: Double
     ): String {
-
-        val payload = hashMapOf(
+        val data = hashMapOf(
             "storeId" to storeId,
             "storeName" to storeName,
-            "address" to hashMapOf(
-                "fullName" to address.fullName,
-                "phone" to address.phone,
-                "line1" to address.line1,
-                "line2" to (address.line2 ?: ""),
-                "city" to address.city,
-                "state" to address.state,
-                "pincode" to address.pincode
-            ),
-            "items" to items.map { it ->
-                hashMapOf(
-                    "productId" to it.productId,
-                    "name" to it.name,
-                    "imageUrl" to it.imageUrl,
-                    "unitPrice" to it.unitPrice,
-                    "qty" to it.quantity
-                )
-            }
+            "buyerName" to buyerName,
+            "buyerPhone" to buyerPhone,
+            "itemsTotal" to itemsTotal,
+            "shipping" to shipping,
+            "grandTotal" to grandTotal
         )
 
         val res = functions
             .getHttpsCallable("createOrder")
-            .call(payload)
+            .call(data)
             .await()
 
         val map = res.data as Map<*, *>
-        return map["orderId"] as? String ?: error("Missing orderId")
+        return map["orderId"] as String
     }
 }
