@@ -32,6 +32,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun SwipeProceedButton(
+    title: String ,
     enabled: Boolean,
     onSwipeComplete: () -> Unit
 ) {
@@ -66,7 +67,7 @@ fun SwipeProceedButton(
                 .onSizeChanged { trackWidthPx = it.width.toFloat() }
         ) {
             Text(
-                text = "Proceed to checkout",
+                text = title,
                 modifier = Modifier.align(Alignment.Center),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = Color.White

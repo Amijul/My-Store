@@ -1,42 +1,41 @@
 package com.amijul.mystore.data.remote
 
-
-import com.amijul.mystore.domain.order.OrderRemoteRepository
+import com.amijul.mystore.domain.order.CreateOrderAddressPayload
+import com.amijul.mystore.domain.order.CreateOrderItemPayload
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.tasks.await
 
-class OrderFunctionsRepository(
+class OrderRemoteRepositoryImpl(
     private val functions: FirebaseFunctions
-) : OrderRemoteRepository {
-
-    override suspend fun createOrder(
+) {
+    suspend fun createOrder(
         storeId: String,
         storeName: String,
-        address: com.amijul.mystore.data.local.address.AddressEntity,
-        items: List<com.amijul.mystore.data.local.cart.CartItemEntity>
+        items: List<CreateOrderItemPayload>,
+        address: CreateOrderAddressPayload
     ): String {
 
         val payload = hashMapOf(
             "storeId" to storeId,
             "storeName" to storeName,
-            "address" to hashMapOf(
-                "fullName" to address.fullName,
-                "phone" to address.phone,
-                "line1" to address.line1,
-                "line2" to (address.line2 ?: ""),
-                "city" to address.city,
-                "state" to address.state,
-                "pincode" to address.pincode
-            ),
-            "items" to items.map { it ->
+            "items" to items.map {
                 hashMapOf(
                     "productId" to it.productId,
                     "name" to it.name,
                     "imageUrl" to it.imageUrl,
                     "unitPrice" to it.unitPrice,
-                    "qty" to it.quantity
+                    "qty" to it.qty
                 )
-            }
+            },
+            "address" to hashMapOf(
+                "fullName" to address.fullName,
+                "phone" to address.phone,
+                "line1" to address.line1,
+                "line2" to address.line2,
+                "city" to address.city,
+                "state" to address.state,
+                "pincode" to address.pincode
+            )
         )
 
         val res = functions

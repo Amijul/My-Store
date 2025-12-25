@@ -5,10 +5,17 @@ package com.amijul.mystore.domain.home
 data class StoreUiModel(
     val id: String,
     val name: String,
-    val category: String,
-    val distanceText: String,   // e.g. "250m away"
+    val type: String,
+    val phone: String,
     val imageUrl: String,
-    val locationName: String,
-    val isOpen: Boolean
+
+    // Address
+    val line1: String,
+    val city: String,
+    val state: String,
+    val pincode: String,
+
+    // Status
+    val isActive: Boolean
 )
 

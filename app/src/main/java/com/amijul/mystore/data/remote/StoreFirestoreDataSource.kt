@@ -20,30 +20,39 @@ class StoreFirestoreDataSource(
 
     suspend fun getStores(): List<StoreUiModel> {
         val snapshot = firestore.collection("stores")
-            .get().await()
+            .get()
+            .await()
 
         return snapshot.documents.mapNotNull { doc ->
             val id = doc.id
             val name = doc.getString("name") ?: return@mapNotNull null
-            val category = doc.getString("category") ?: "Other"
-            val distanceText = doc.getString("distanceText") ?: ""
-            val imageUrl = doc.getString("imageUrl") ?: ""
-            val locationName = doc.getString("locationName") ?: ""
-            val isOpen = doc.getBoolean("isOpen") ?: false
 
-           // Log.d(TAG, "getStores: $name, $category, $distanceText, $imageUrl, $locationName, $isOpen")
+            val type = doc.getString("type").orEmpty().ifBlank { "other" }
+            val phone = doc.getString("phone").orEmpty()
+            val imageUrl = doc.getString("imageUrl").orEmpty()
+            val isActive = doc.getBoolean("isActive") ?: true
+
+            val address = doc.get("address") as? Map<*, *>
+            val line1 = address?.get("line1") as? String ?: ""
+            val city = address?.get("city") as? String ?: ""
+            val state = address?.get("state") as? String ?: ""
+            val pincode = address?.get("pincode") as? String ?: ""
 
             StoreUiModel(
                 id = id,
                 name = name,
-                category = category,
-                distanceText = distanceText,
+                type = type,
+                phone = phone,
                 imageUrl = imageUrl,
-                locationName = locationName,
-                isOpen = isOpen
+                line1 = line1,
+                city = city,
+                state = state,
+                pincode = pincode,
+                isActive = isActive
             )
         }
     }
+
 
     companion object {
         fun default(): StoreFirestoreDataSource {

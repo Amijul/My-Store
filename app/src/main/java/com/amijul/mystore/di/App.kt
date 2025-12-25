@@ -10,6 +10,7 @@ import com.amijul.mystore.data.local.cart.CartLocalRepositoryImpl
 import com.amijul.mystore.data.local.db.LocalDatabase
 import com.amijul.mystore.data.local.order.OrderLocalRepositoryImpl
 import com.amijul.mystore.data.local.user.UserLocalRepositoryImpl
+import com.amijul.mystore.data.order.BuyerOrdersFirestoreRepository
 import com.amijul.mystore.data.remote.OrderFunctionsRepository
 import com.amijul.mystore.data.remote.ProductFirestoreDataSource
 import com.amijul.mystore.data.remote.StoreFirestoreDataSource
@@ -26,6 +27,7 @@ import com.amijul.mystore.ui.account.address.EditAddressViewModel
 import com.amijul.mystore.ui.account.profile.EditUserProfileViewModel
 import com.amijul.mystore.ui.cart.CartViewModel
 import com.amijul.mystore.ui.home.HomeViewModel
+import com.amijul.mystore.ui.order.OrderDetailsViewModel
 import com.amijul.mystore.ui.order.OrderViewModel
 import com.amijul.mystore.ui.products.ProductListViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -76,12 +78,15 @@ private val appModule = module {
     single { FirebaseFirestore.getInstance() }
     single { FirebaseAuth.getInstance() }
     single { FirebaseFunctions.getInstance() }
+
     single<AuthRepository> { AuthRepositoryImpl(get()) }
     single<RoleRepository>{ FirebaseRoleRepository(auth = get(), db = get(), functions = get()) }
     single<OrderRemoteRepository>{ OrderFunctionsRepository(get()) }
     // Data sources
     single { StoreFirestoreDataSource(get()) }
     single { ProductFirestoreDataSource(get()) }
+
+    single { BuyerOrdersFirestoreRepository(get()) }
 
 
     // ViewModels
@@ -143,6 +148,14 @@ private val appModule = module {
             userIdProvider = { get<FirebaseAuth>().currentUser?.uid },        // provide lambda
             authEmailProvider = { get<FirebaseAuth>().currentUser?.email },      // provide lambda
             userRepo = get()
+        )
+    }
+
+    viewModel { (storeId: String, orderId: String) ->
+        OrderDetailsViewModel(
+            storeId = storeId,
+            orderId = orderId,
+            repo = get()
         )
     }
 

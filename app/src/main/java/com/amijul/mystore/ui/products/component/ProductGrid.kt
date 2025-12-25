@@ -19,14 +19,17 @@ fun ProductGrid(
     onAdd: (ProductUiModel) -> Unit,
     onIncrease: (String) -> Unit,
     onDecrease: (String) -> Unit,
-    onProductClick: (ProductUiModel) -> Unit
+    onProductClick: (ProductUiModel) -> Unit,
+    contentPadding: PaddingValues = PaddingValues(bottom = 24.dp)
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        modifier = Modifier.fillMaxSize().padding(vertical = 16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 24.dp)
+        contentPadding = contentPadding
     ) {
         items(products, key = { it.id }) { product ->
             val qty = qtyByProductId[product.id] ?: 0

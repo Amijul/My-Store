@@ -254,6 +254,7 @@ fun ProductDetailScreen(
                     .navigationBarsPadding()
             ) {
                 SwipeProceedButton(
+                    title = "Proceed to cart",
                     enabled = product!!.inStock,
                     onSwipeComplete = {
                         onProceedToCheckout()

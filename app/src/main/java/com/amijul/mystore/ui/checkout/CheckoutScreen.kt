@@ -29,7 +29,9 @@ import org.koin.core.parameter.parametersOf
 fun CheckoutScreen(
     storeId: String,
     storeName: String,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOrderPlaced: (String) -> Unit,
+    orderViewModel: OrderViewModel = koinViewModel()
 ) {
     val bg = Color(0xFFD9E3FF)
 
@@ -38,8 +40,7 @@ fun CheckoutScreen(
         parameters = { parametersOf(storeId, storeName) }
     )
 
-    // Global orders VM (Option 1)
-    val orderViewModel: OrderViewModel = koinViewModel()
+
 
     LaunchedEffect(storeId) {
         cartViewModel.start()
@@ -65,25 +66,23 @@ fun CheckoutScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .height(44.dp)
+                    .background(Color.White),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
+                        contentDescription = "Back Arrow"
                     )
                 }
 
-                Spacer(Modifier.weight(1f))
 
                 Text(
                     text = "Checkout",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
                 )
 
-                Spacer(Modifier.weight(1f))
-                Spacer(Modifier.width(48.dp))
             }
 
             Spacer(Modifier.height(10.dp))
@@ -191,11 +190,19 @@ fun CheckoutScreen(
             Spacer(Modifier.height(12.dp))
 
             SwipeProceedButton(
+                title = "Proceed to Buy",
                 enabled = cartState.items.isNotEmpty() && orderState.active.hasAddress,
                 onSwipeComplete = {
-                    orderViewModel.buyNow(storeId = storeId, storeName = storeName)
+                    orderViewModel.buyNow(
+                        storeId = storeId,
+                        storeName = storeName,
+                        onSuccess = { orderId ->
+                            onOrderPlaced(orderId)
+                        }
+                    )
                 }
             )
+
         }
     }
 }

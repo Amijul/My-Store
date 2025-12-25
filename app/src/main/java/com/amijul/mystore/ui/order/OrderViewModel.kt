@@ -3,8 +3,6 @@ package com.amijul.mystore.ui.order
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.amijul.mystore.data.local.address.AddressDao
-import com.amijul.mystore.data.local.order.OrderEntity
-import com.amijul.mystore.data.local.order.OrderItemEntity
 import com.amijul.mystore.domain.cart.CartLocalRepository
 import com.amijul.mystore.domain.order.OrderLocalRepository
 import com.amijul.mystore.domain.order.OrderRemoteRepository
@@ -17,7 +15,6 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 data class OrderItemUi(
     val storeId: String,
@@ -122,7 +119,11 @@ class OrderViewModel(
      * This should be called from Checkout flow (store-scoped), not Orders tab.
      * It creates local order snapshot and clears only the current store cart.
      */
-    fun buyNow(storeId: String, storeName: String) {
+    fun buyNow(
+        storeId: String,
+        storeName: String,
+        onSuccess: (orderId: String) -> Unit
+    ) {
         val uid = userIdProvider().orEmpty()
         if (uid.isBlank()) return
 
@@ -140,21 +141,34 @@ class OrderViewModel(
             }
 
             try {
-                // Remote order create
+                val addr = addressDao.getDefault(uid)
+                if (addr == null) {
+                    _state.value = _state.value.copy(message = "No default address found.")
+                    return@launch
+                }
+
+                // IMPORTANT: createOrder payload must include full items details + address.
+                // Your current cloud function payload only has productId/qty.
+                // So we must update OrderFunctionsRepository to send name, unitPrice, imageUrl, address, storeName.
                 val orderId = orderRemoteRepo.createOrder(
                     storeId = storeId,
-                    items = cart.map { it.productId to it.quantity }
+                    storeName = storeName,
+                    address = addr,
+                    items = cart
                 )
 
-                // Clear local cart for that store
                 cartRepo.clearStore(uid, storeId)
 
                 _state.value = _state.value.copy(message = "Order placed. OrderId: $orderId")
+
+                onSuccess(orderId)
+
             } catch (e: Exception) {
                 _state.value = _state.value.copy(message = e.message ?: "Order failed")
             }
         }
     }
+
 
 
 

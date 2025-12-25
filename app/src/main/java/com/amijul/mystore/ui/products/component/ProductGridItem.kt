@@ -1,30 +1,14 @@
 package com.amijul.mystore.ui.products.component
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,8 +20,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.amijul.mystore.domain.product.ProductUiModel
-import androidx.compose.foundation.clickable
-
 
 @Composable
 fun ProductGridItem(
@@ -47,85 +29,120 @@ fun ProductGridItem(
     onAddFirstTime: () -> Unit,
     onIncrease: () -> Unit,
     onDecrease: () -> Unit
-)
- {
+) {
+    val cardShape = RoundedCornerShape(18.dp)
+
+    val inStock = product.inStock && product.stockQty > 0
+    val stockText = if (inStock) "Stock: ${product.stockQty}" else "Out of stock"
+    val stockBg = if (inStock) Color(0xFFE8F7EE) else Color(0xFFFFE7E7)
+    val stockFg = if (inStock) Color(0xFF166534) else Color(0xFF991B1B)
+
     val inCart = quantity > 0
     val enabled = product.inStock
 
+
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        shape = cardShape,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.clickable { onOpenDetails() }
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-
-            // ✅ Only image opens details (so add/+/- never navigate)
-            AsyncImage(
-                model = product.imageUrl.takeIf { it.isNotBlank() },
-                contentDescription = product.name,
-                contentScale = ContentScale.Crop,
+        Column {
+            // Image
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable(onClick = onOpenDetails)
-            )
-
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(10.dp)
+                    .height(120.dp)
+                    .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                contentAlignment = Alignment.Center
             ) {
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "₹${product.price.toInt()}",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold
-                        )
+                val img = product.imageUrl.trim()
+                if (img.isNotBlank()) {
+                    AsyncImage(
+                        model = img,
+                        contentDescription = product.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    IconButton(
-                        onClick = { /* wishlist later */ },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.FavoriteBorder,
-                            contentDescription = "Wishlist",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                } else {
+                    Text(
+                        text = "No Image",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
+                // Stock badge
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp),
+                    shape = RoundedCornerShape(999.dp),
+                    color = stockBg
+                ) {
+                    Text(
+                        text = stockText,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = stockFg,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Name
                 Text(
                     text = product.name,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 2,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                // Description
+                if (product.description.isNotBlank()) {
+                    Text(
+                        text = product.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
-                val stockColor = if (product.inStock) Color(0xFF2E7D32) else Color(0xFFC62828)
-                val stockText = if (product.inStock) "In stock" else "Out of stock"
+                // Price row: price + unit, mrp struck-through if valid
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "₹${formatMoney(product.price)}${unitSuffix(product.unit)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (product.mrp > 0f && product.mrp > product.price) {
+                            Text(
+                                text = "MRP ₹${formatMoney(product.mrp)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                            )
+                        }
 
-                Text(
-                    text = stockText,
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                    color = stockColor
-                )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+
+                }
 
                 // ✅ Real cart actions: add / increase / decrease
                 if (!inCart) {
@@ -163,7 +180,8 @@ fun ProductGridItem(
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    )
+                    {
                         IconButton(
                             enabled = enabled,
                             onClick = {
@@ -202,4 +220,15 @@ fun ProductGridItem(
             }
         }
     }
+}
+
+
+private fun unitSuffix(unit: String): String {
+    val u = unit.trim()
+    return if (u.isBlank()) "" else " / $u"
+}
+
+private fun formatMoney(v: Float): String {
+    val i = v.toInt()
+    return if (v == i.toFloat()) i.toString() else String.format("%.2f", v)
 }

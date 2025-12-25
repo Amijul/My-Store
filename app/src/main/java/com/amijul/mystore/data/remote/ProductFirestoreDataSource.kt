@@ -21,10 +21,12 @@ class ProductFirestoreDataSource(
         return snapshot.documents.mapNotNull { doc ->
             val id = doc.id
             val name = doc.getString("name")?.trim().orEmpty()
+            val description = doc.getString("description").orEmpty()
             if (name.isBlank()) return@mapNotNull null
-
+            val mrp = (doc.getDouble("mrp") ?: 0.0).toFloat()
+            val stockQty = (doc.getLong("stockQty") ?: 0L).toInt()
             val price = (doc.getDouble("price") ?: 0.0).toFloat()
-            val inStock = doc.getBoolean("inStock") ?: true
+            val inStock = doc.getBoolean("inStock") ?: (stockQty > 0)
 
             // Backward compatible image
             val imageUrl = pickBestImageUrl(doc)
@@ -37,9 +39,12 @@ class ProductFirestoreDataSource(
             ProductUiModel(
                 id = id,
                 name = name,
+                description = description,
                 price = price,
+                mrp = mrp,
                 unit = unitText,
                 imageUrl = imageUrl,
+                stockQty = stockQty,
                 inStock = inStock
             )
         }

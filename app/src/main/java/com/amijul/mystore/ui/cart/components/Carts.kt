@@ -32,19 +32,20 @@ fun Carts(
         modifier = Modifier
             .fillMaxSize()
             .background(bg)
+            .statusBarsPadding()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp)
         ) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .height(44.dp)
+                    .background(Color.White),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
                     Icon(
@@ -53,22 +54,20 @@ fun Carts(
                     )
                 }
 
-                Spacer(Modifier.weight(1f))
 
                 Text(
                     text = "Cart",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
                 )
 
-                Spacer(Modifier.weight(1f))
-                Spacer(Modifier.width(48.dp)) // symmetry
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(32.dp))
 
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
                     .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 180.dp)
@@ -104,6 +103,7 @@ fun Carts(
             Spacer(Modifier.height(12.dp))
 
             SwipeProceedButton(
+                title = "Proceed to checkout",
                 enabled = state.items.isNotEmpty(),
                 onSwipeComplete = onProceedCheckout
             )

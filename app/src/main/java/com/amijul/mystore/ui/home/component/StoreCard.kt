@@ -1,136 +1,192 @@
 package com.amijul.mystore.ui.home.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.amijul.mystore.domain.home.StoreUiModel
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
 
 @Composable
 fun StoreCard(
     store: StoreUiModel,
     onClick: () -> Unit
 ) {
+    val shape = RoundedCornerShape(18.dp)
+
+    val statusBg = if (store.isActive) Color(0xFF16A34A) else Color(0xFFDC2626) // green/red
+    val statusText = if (store.isActive) "Open" else "Closed"
+
+    val typeText = store.type.ifBlank { "other" }.replaceFirstChar { it.uppercase() }
+
+    val addressText = buildString {
+        val parts = listOf(store.line1, store.city, store.state).filter { it.isNotBlank() }
+        append(parts.joinToString(", "))
+        if (store.pincode.isNotBlank()) {
+            if (isNotEmpty()) append(" - ")
+            append(store.pincode)
+        }
+    }.ifBlank { "Address not available" }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = MaterialTheme.shapes.large,
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-        )
+            .clickable(onClick = onClick),
+        shape = shape,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding( 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
-            // LEFT: text info (50%)
+            // LEFT: text area
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 12.dp)
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-
-                // Category pill
-                Row(Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                // Chips row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-
-                    Text(
-                        text = store.category,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.small)
-                            .background(MaterialTheme.colorScheme.primary)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    Chip(
+                        text = typeText,
+                        bg = MaterialTheme.colorScheme.primary,
+                        fg = MaterialTheme.colorScheme.onPrimary
                     )
-
-                    Text(
-                        text = if(store.isOpen) "Open" else "Closed",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.small)
-                            .background(if(store.isOpen) Color(0xFF8CFA97) else MaterialTheme.colorScheme.error)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    Chip(
+                        text = statusText,
+                        bg = statusBg,
+                        fg = Color.White
                     )
-
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
+                // Store name
                 Text(
                     text = store.name,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
-
-
-                Spacer(modifier = Modifier.height(4.dp))
-
+                // Address
                 Text(
-                    text = store.distanceText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = store.locationName,
+                    text = addressText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
+
+                // Phone (optional)
+                if (store.phone.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(999.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                    ) {
+                        Text(
+                            text = "Call: ${store.phone}",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
 
-            // RIGHT: image (50%), uses full width of its half
-            AsyncImage(
-                model = store.imageUrl,
-                contentDescription = store.name,
-                contentScale = ContentScale.Crop,
+            // RIGHT: image area (premium)
+            Box(
                 modifier = Modifier
-                    .weight(1f)                // equal space as text
-                    .aspectRatio(1.2f)          // tweak ratio: 1f = square, >1 = wider
-                    .clip(MaterialTheme.shapes.large)
-            )
+                    .width(132.dp)
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            ) {
+                val img = store.imageUrl.trim()
+
+                if (img.isNotBlank()) {
+                    AsyncImage(
+                        model = img,
+                        contentDescription = store.name,
+                        contentScale = ContentScale.FillBounds,
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    // subtle gradient overlay for premium feel
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.22f)
+                                    )
+                                )
+                            )
+                    )
+                } else {
+                    // fallback
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No Image",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun Chip(
+    text: String,
+    bg: Color,
+    fg: Color
+) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = bg
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            color = fg,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }

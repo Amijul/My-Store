@@ -4,8 +4,11 @@ package com.amijul.mystore.domain.product
 data class ProductUiModel(
     val id: String,
     val name: String,
+    val description: String = "",
     val price: Float,
-    val unit: String,
-    val imageUrl: String,
-    val inStock: Boolean
+    val mrp: Float = 0f,
+    val unit: String = "",
+    val stockQty: Int = 0,
+    val imageUrl: String = "",
+    val inStock: Boolean = true
 )
