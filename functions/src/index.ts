@@ -30,41 +30,67 @@ export const createOrder = onCall(async (req) => {
   const items = (data.items || []) as OrderItemPayload[];
   const address = data.address as AddressPayload | undefined;
 
-  if (!storeId) throw new HttpsError("invalid-argument", "storeId required");
-  if (!storeName) throw new HttpsError("invalid-argument", "storeName required");
-  if (!address) throw new HttpsError("invalid-argument", "address required");
+  if (!storeId) throw new
+  HttpsError("invalid-argument", "storeId required");
+
+  if (!storeName) throw new
+  HttpsError("invalid-argument", "storeName required");
+
+  if (!address) throw new
+  HttpsError("invalid-argument", "address required");
+
   if (!Array.isArray(items) || items.length === 0)
-    throw new HttpsError("invalid-argument", "items required");
+    throw new
+     HttpsError("invalid-argument", "items required");
 
   // Get store ownerUid
-  const storeRef = admin.firestore().collection("stores").doc(storeId);
+  const storeRef = admin.firestore()
+  .collection("stores").doc(storeId);
+
   const storeSnap = await storeRef.get();
-  if (!storeSnap.exists) throw new HttpsError("not-found", "Store not found");
+
+  if (!storeSnap.exists) throw new
+   HttpsError("not-found", "Store not found");
 
   const ownerUid = (storeSnap.get("ownerUid") as string) || "";
-  if (!ownerUid) throw new HttpsError("failed-precondition", "Store owner missing");
+
+  if (!ownerUid) throw new
+   HttpsError("failed-precondition", "Store owner missing");
 
   // Validate items
   for (const it of items) {
-    if (!it.productId || !it.name) throw new HttpsError("invalid-argument", "Invalid item");
+    if (!it.productId || !it.name)
+    throw new HttpsError("invalid-argument", "Invalid item");
+
     if (!Number.isFinite(it.unitPrice) || it.unitPrice <= 0)
-      throw new HttpsError("invalid-argument", "Invalid unitPrice");
+      throw new
+      HttpsError("invalid-argument", "Invalid unitPrice");
+
     if (!Number.isInteger(it.qty) || it.qty <= 0)
-      throw new HttpsError("invalid-argument", "Invalid qty");
+      throw new
+      HttpsError("invalid-argument", "Invalid qty");
   }
 
-  const itemsTotal = items.reduce((sum, it) => sum + it.unitPrice * it.qty, 0);
+  const itemsTotal = items.reduce((sum, it) =>
+  sum + it.unitPrice * it.qty, 0);
   const shipping = 0;
   const grandTotal = itemsTotal + shipping;
 
   // Buyer snapshot (optional)
-  const userSnap = await admin.firestore().collection("users").doc(uid).get();
-  const buyerName = (userSnap.get("name") as string) || address.fullName || "Buyer";
-  const buyerPhone = (userSnap.get("phone") as string) || address.phone || "";
+  const userSnap = await admin.firestore()
+  .collection("users").doc(uid).get();
+
+  const buyerName = (userSnap.get("name") as string) ||
+   address.fullName || "Buyer";
+
+  const buyerPhone = (userSnap.get("phone") as string) ||
+   address.phone || "";
 
   const db = admin.firestore();
-  const orderRef = db.collection("stores").doc(storeId).collection("orders").doc();
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const orderRef = db.collection("stores")
+  .doc(storeId).collection("orders").doc();
+  const now = admin.firestore.FieldValue
+  .serverTimestamp();
 
   const orderDoc = {
     orderId: orderRef.id,
