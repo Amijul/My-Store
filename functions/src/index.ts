@@ -43,7 +43,9 @@ export const createOrder = onCall(async (req) => {
   }
 
   for (const it of items) {
-    if (!it.productId || !it.name) throw new HttpsError("invalid-argument", "Invalid item");
+    if (!it.productId || !it.name) throw new
+    HttpsError("invalid-argument", "Invalid item");
+
     if (!Number.isFinite(it.unitPrice) || it.unitPrice <= 0) {
       throw new HttpsError("invalid-argument", "Invalid unitPrice");
     }
@@ -60,19 +62,26 @@ export const createOrder = onCall(async (req) => {
   if (!storeSnap.exists) throw new HttpsError("not-found", "Store not found");
 
   const ownerUid = String(storeSnap.get("ownerUid") ?? "").trim();
-  if (!ownerUid) throw new HttpsError("failed-precondition", "Store owner missing");
+
+  if (!ownerUid) throw new
+  HttpsError("failed-precondition", "Store owner missing");
 
   const storeName =
-    String(storeSnap.get("name") ?? "").trim() || String(data.storeName ?? "").trim();
-  if (!storeName) throw new HttpsError("failed-precondition", "Store name missing");
+   String(storeSnap.get("name") ?? "").trim() ||
+    String(data.storeName ?? "").trim();
+
+  if (!storeName) throw new
+  HttpsError("failed-precondition", "Store name missing");
 
   // Buyer snapshot (optional)
   const userSnap = await db.collection("users").doc(uid).get();
   const buyerName =
-    String(userSnap.get("name") ?? "").trim() || String(address.fullName ?? "").trim() || "Buyer";
+    String(userSnap.get("name") ?? "").trim() ||
+     String(address.fullName ?? "").trim() || "Buyer";
 
   const buyerPhone =
-    String(userSnap.get("phone") ?? "").trim() || String(address.phone ?? "").trim() || "";
+    String(userSnap.get("phone") ?? "").trim() ||
+     String(address.phone ?? "").trim() || "";
 
   const itemsTotal = items.reduce((sum, it) => sum + it.unitPrice * it.qty, 0);
   const shipping = 0;
