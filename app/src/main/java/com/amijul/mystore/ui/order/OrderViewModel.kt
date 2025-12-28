@@ -184,9 +184,7 @@ class OrderViewModel(
 
         val current = _state.value
         if (!current.active.hasAddress) {
-            _state.value = current.copy(
-                message = "Add a delivery address first."
-            )
+            _state.value = current.copy(message = "Add a delivery address first.")
             return
         }
 
@@ -194,9 +192,7 @@ class OrderViewModel(
             try {
                 val cart = cartRepo.getCartOnce(uid, storeId)
                 if (cart.isEmpty()) {
-                    _state.value = _state.value.copy(
-                        message = "Cart is empty."
-                    )
+                    _state.value = _state.value.copy(message = "Cart is empty.")
                     return@launch
                 }
 
@@ -208,21 +204,11 @@ class OrderViewModel(
                     return@launch
                 }
 
-                // 🔹 Calculate totals locally
-                val itemsTotal = cart.sumOf { it.unitPrice * it.quantity.toDouble() }
-
-                val shipping = 0.0
-                val grandTotal = itemsTotal + shipping
-
-                // 🔹 CALL FIXED createOrder()
                 val orderId = orderRemoteRepo.createOrder(
                     storeId = storeId,
                     storeName = storeName,
-                    buyerName = addr.fullName,
-                    buyerPhone = addr.phone,
-                    itemsTotal = itemsTotal,
-                    shipping = shipping,
-                    grandTotal = grandTotal
+                    address = addr,
+                    items = cart
                 )
 
                 cartRepo.clearStore(uid, storeId)
@@ -239,7 +225,6 @@ class OrderViewModel(
             }
         }
     }
-
 
     fun clearMessage() {
         _state.value = _state.value.copy(message = null)

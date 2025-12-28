@@ -35,12 +35,9 @@ fun CheckoutScreen(
 ) {
     val bg = Color(0xFFD9E3FF)
 
-    // Store-scoped cart VM
     val cartViewModel: CartViewModel = koinViewModel(
         parameters = { parametersOf(storeId, storeName) }
     )
-
-
 
     LaunchedEffect(storeId) {
         cartViewModel.start()
@@ -50,16 +47,13 @@ fun CheckoutScreen(
     val cartState by cartViewModel.state.collectAsStateWithLifecycle()
     val orderState by orderViewModel.state.collectAsStateWithLifecycle()
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(bg)
             .statusBarsPadding()
     ) {
-
-        Spacer(Modifier.height(10.dp))
-
-        // Top bar
+        // 1) Top bar: Back + Checkout
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -67,8 +61,7 @@ fun CheckoutScreen(
                 .background(Color.White)
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
-        )
-        {
+        ) {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
@@ -80,102 +73,93 @@ fun CheckoutScreen(
             Spacer(Modifier.width(8.dp))
         }
 
-
-
-        Column(
+        // 2-5) Everything below scrolls (store name, address, payment, items header, items list)
+        LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(top = 10.dp, bottom = 12.dp)
         ) {
+            // 2) Store name
+            item {
+                Text(
+                    text = storeName,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium)
+                )
+            }
 
-            Spacer(Modifier.height(10.dp))
-
-            // Store name
-            Text(
-                text = storeName,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium)
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            // Address
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "Delivery Address",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
-                    )
-                    Spacer(Modifier.height(6.dp))
-
-                    if (orderState.active.hasAddress) {
+            // 3) Address
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = orderState.active.addressText,
-                            style = MaterialTheme.typography.bodyMedium
+                            text = "Delivery Address",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
                         )
-                    } else {
+                        Spacer(Modifier.height(6.dp))
+
+                        if (orderState.active.hasAddress) {
+                            Text(
+                                text = orderState.active.addressText,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        } else {
+                            Text(
+                                text = "No default address found. Please add one in Account → Address.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 4) Payment
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = "No default address found. Please add one in Account → Address.",
+                            text = "Payment Method",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "Cash on Delivery (COD)",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            // Payment (COD for now)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "Payment Method",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = "Cash on Delivery (COD)",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
+            // 5) Items header
+            item {
+                Text(
+                    text = "Items",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
+                )
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            // Items
-            Text(
-                text = "Items",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 180.dp)
-            ) {
-                items(cartState.items, key = { it.id }) { item ->
-                    CartItemCard(
-                        item = item,
-                        onIncrease = { cartViewModel.increase(item.id) },
-                        onDecrease = { cartViewModel.decrease(item.id) },
-                        onRemove = { cartViewModel.remove(item.id) }
-                    )
-                }
+            // 5) Items list
+            items(cartState.items, key = { it.id }) { item ->
+                CartItemCard(
+                    item = item,
+                    onIncrease = { cartViewModel.increase(item.id) },
+                    onDecrease = { cartViewModel.decrease(item.id) },
+                    onRemove = { cartViewModel.remove(item.id) }
+                )
             }
         }
 
-        // Bottom summary + place order
+        // 6) Bottom summary + proceed (fixed, not scrolling)
         Column(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .background(bg)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -199,13 +183,10 @@ fun CheckoutScreen(
                     orderViewModel.buyNow(
                         storeId = storeId,
                         storeName = storeName,
-                        onSuccess = { orderId ->
-                            onOrderPlaced(orderId)
-                        }
+                        onSuccess = { orderId -> onOrderPlaced(orderId) }
                     )
                 }
             )
-
         }
     }
 }
